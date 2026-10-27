@@ -1,0 +1,7 @@
+{
+  "appId": "com.hofcodez.leaguetradecalc",
+  "appName": "League Trade Calc",
+  "webDir": "dist",
+  "backgroundColor": "#14110f",
+  "server": { "androidScheme": "https" }
+}

@@ -1,0 +1,71 @@
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config.ts';
+import type { BallotAsset, TeamOption, ValuesPayload } from './types.ts';
+
+export class ApiError extends Error {
+  code: string;
+  status: number;
+  constructor(code: string, status: number, message?: string) {
+    super(message || code);
+    this.code = code;
+    this.status = status;
+  }
+}
+
+async function call<T>(fn: string, body: Record<string, unknown>): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError('offline', 0, 'No connection. Try again when you are online.');
+  }
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* empty body */
+  }
+  if (!res.ok) {
+    throw new ApiError(data?.error || 'server_error', res.status, data?.message || data?.error);
+  }
+  return data as T;
+}
+
+const tc = <T,>(action: string, token: string | null, extra: Record<string, unknown> = {}) =>
+  call<T>('tc-api', { action, deviceToken: token, ...extra });
+
+export const api = {
+  teams: () => tc<{ teams: TeamOption[] }>('teams', null),
+  me: (t: string) => tc<{ teamId: string; name: string; votesLeft: number }>('me', t),
+  values: (t: string, since?: number) => tc<ValuesPayload>('values', t, { since }),
+  ballot: (t: string) => tc<{ votesLeft: number; assets: BallotAsset[] }>('ballot', t),
+  vote: (t: string, keep: string, trade: string, cut: string) =>
+    tc<{ ok: true; votesLeft: number }>('vote', t, { keep, trade, cut }),
+  // Reuses Brown Bell's existing claim function: same PINs, same device tokens.
+  claim: (teamId: string, pin: string, deviceLabel: string) =>
+    call<{ success: boolean; deviceToken: string; action: 'claimed' | 'unlocked' }>('claim-team', {
+      teamId,
+      pin,
+      deviceLabel,
+    }),
+};
+
+export function friendly(e: unknown): string {
+  if (e instanceof ApiError) {
+    switch (e.code) {
+      case 'offline': return e.message;
+      case 'daily_limit': return 'You are out of votes for today. They reset at midnight Arizona time.';
+      case 'own_asset': return 'That ballot included one of your players. Loading a new one.';
+      case 'not_signed_in': return 'Your sign in expired. Sign in again.';
+      default: return e.message && e.message !== 'server_error' ? e.message : 'Something went wrong. Try again.';
+    }
+  }
+  return 'Something went wrong. Try again.';
+}
