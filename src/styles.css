@@ -100,3 +100,6 @@ h2 { margin: 0; font-size: 17px; }
 .segbtn.keep.on { background: var(--good); color: #0f1c0f; border-color: var(--good); }
 .segbtn.trade.on { background: var(--warn); color: #231a05; border-color: var(--warn); }
 .segbtn.cut.on { background: var(--bad); color: #240d07; border-color: var(--bad); }
+
+/* children of a scrolling column must not shrink, or rows like the filter chips get squashed */
+.screen > * { flex-shrink: 0; }
