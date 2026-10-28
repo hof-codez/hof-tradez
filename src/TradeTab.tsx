@@ -71,7 +71,7 @@ export default function TradeTab({
     const term = q.trim().toLowerCase();
     return assets
       .filter((x) => {
-        if (used.has(x.id)) return false;
+        if (picking && (picking === 'A' ? b : a).some((y) => y.id === x.id)) return false; // on the other side already
         if (term && !x.name.toLowerCase().includes(term)) return false;
         if (scope === 'mine') return mine.has(x.id);
         if (scope === 'theirs') return theirs.has(x.id);
@@ -83,7 +83,7 @@ export default function TradeTab({
         return true;
       })
       .slice(0, scope === 'picks' ? 200 : 60);
-  }, [assets, used, q, scope, mine, theirs, partner]);
+  }, [assets, a, b, picking, q, scope, mine, theirs, partner]);
 
   // who holds each pick right now
   const holder = useMemo(() => {
@@ -250,7 +250,16 @@ export default function TradeTab({
                 return (
                   <div key={x.id}>
                     {head && <div className="meta strong pad-top">{who === 'You' ? 'Your picks' : `${who}'s picks`}</div>}
-                    <AssetRow a={x} note={x.kind === 'pick' && who ? `Held by ${who}` : undefined} onClick={() => add(x, picking)} right={<span className="meta">{x.value.toLocaleString()}</span>} />
+                    <label className="pickrow">
+                      <input
+                        type="checkbox"
+                        checked={(picking === 'A' ? a : b).some((y) => y.id === x.id)}
+                        onChange={(e) => (e.target.checked ? add(x, picking) : remove(x.id, picking))}
+                      />
+                      <div className="grow">
+                        <AssetRow a={x} note={x.kind === 'pick' && who ? `Held by ${who}` : undefined} right={<span className="meta">{x.value.toLocaleString()}</span>} />
+                      </div>
+                    </label>
                   </div>
                 );
               })}

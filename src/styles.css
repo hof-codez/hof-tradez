@@ -139,3 +139,7 @@ nav button { font-size: 11px; }
 .why-side{border-top:1px solid var(--line,#2a2f3a);padding-top:8px}
 .btn.ghost{background:transparent;border:1px solid var(--line,#2a2f3a)}
 details summary{cursor:pointer}
+
+.pickrow{display:flex;align-items:center;gap:10px;cursor:pointer}
+.pickrow input{width:22px;height:22px;flex:none;accent-color:var(--accent,#d9962f)}
+.pickrow .grow{flex:1;min-width:0}
