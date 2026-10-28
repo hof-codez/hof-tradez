@@ -3,7 +3,7 @@ import type { Asset, LeagueTeam } from './types.ts';
 import type { RosterInsight } from './insight.ts';
 import { AVAILABILITY_TEXT, availability, ideasFor, medianTrades, partnerNotes, rosterAssets } from './insight.ts';
 import { OUT_WEEKS, fitFor, fitHeadline } from './lineup.ts';
-import { futureFor, futureHeadline } from './future.ts';
+import { futureFor, futureHeadline, stanceFromRecord, STANCE_LABEL, type Stance } from './future.ts';
 import type { FitData } from './lineup.ts';
 import { balanceIdeas, consensusText, judge } from './trade.ts';
 import { AssetRow } from './ui.tsx';
@@ -65,8 +65,11 @@ export default function TradeTab({
     return fitFor(rosterAssets(partner, byId), b, a, fit, 'them');
   }, [partner, fit, a, b, byId]);
   // Dynasty view: how each side's value holds up over the next few seasons
-  const futureMine = useMemo(() => futureFor(a, b, starPremium, 'you', fit), [a, b, starPremium, fit]);
-  const futureTheirs = useMemo(() => (partner ? futureFor(b, a, starPremium, 'them', fit) : null), [partner, a, b, starPremium, fit]);
+  const [stancePick, setStancePick] = useState<Stance | null>(null);
+  const myStance: Stance = stancePick ?? stanceFromRecord(me?.record);
+  const theirStance: Stance = stanceFromRecord(partner?.record);
+  const futureMine = useMemo(() => futureFor(a, b, starPremium, 'you', fit, myStance), [a, b, starPremium, fit, myStance]);
+  const futureTheirs = useMemo(() => (partner ? futureFor(b, a, starPremium, 'them', fit, theirStance) : null), [partner, a, b, starPremium, fit, theirStance]);
   const myNeeds = me ? insights.get(me.teamId)?.need ?? [] : [];
 
   const mine = useMemo(() => new Set(me?.roster ?? []), [me]);
@@ -189,7 +192,20 @@ export default function TradeTab({
       {futureMine.label !== 'unknown' && (
         <div className="card">
           <h2>Fit for the future</h2>
+          <div className="meta">
+            Your situation{me?.record && !stancePick ? ` (rank ${me.record.rank} of ${me.record.size})` : ''}:{' '}
+            {(['win', 'balanced', 'build'] as Stance[]).map((st) => (
+              <button key={st} type="button" className={`btn ghost small${myStance === st ? ' on' : ''}`} onClick={() => setStancePick(st === stanceFromRecord(me?.record) && stancePick === null ? null : st)}>
+                {STANCE_LABEL[st]}
+              </button>
+            ))}
+          </div>
           <div className="meta strong">{futureHeadline(futureMine, 'Your')}</div>
+          {futureMine.chance !== null && futureMine.range && (
+            <div className="meta">
+              About a {Math.round(futureMine.chance * 100)}% chance this leaves you ahead, counting the next three seasons the way a {STANCE_LABEL[myStance].toLowerCase()} team would. Two seasons out, your net change is likely between {Math.round(futureMine.range.lo).toLocaleString()} and {Math.round(futureMine.range.hi).toLocaleString()}.
+            </div>
+          )}
           {futureMine.notes.map((n) => <div key={n} className="why">{n}</div>)}
           <div className="meta">
             {futureMine.rows.map((r) => (
@@ -201,11 +217,14 @@ export default function TradeTab({
           {partner && futureTheirs && futureTheirs.label !== 'unknown' && (
             <>
               <div className="meta strong pad-top">{futureHeadline(futureTheirs, `${partner.name}'s`)}</div>
+              {futureTheirs.chance !== null && (
+                <div className="meta">About a {Math.round(futureTheirs.chance * 100)}% chance this leaves them ahead, weighted for a {STANCE_LABEL[theirStance].toLowerCase()} team.</div>
+              )}
               {futureTheirs.notes.map((n) => <div key={n} className="why">{n}</div>)}
             </>
           )}
           <div className="meta small">
-            An estimate from age, position and usage. Each player's value is moved along a typical dynasty curve (running backs fade fastest, young receivers and tight ends tend to grow). Players scoring well above what their targets and carries support are marked down, since that gap has tended to shrink the next season. Picks hold their value. It does not know about injuries or role changes, so treat it as a lean, not a forecast.
+            An estimate from age, position and usage. Each player's value is moved along a typical dynasty curve (running backs fade fastest, young receivers and tight ends tend to grow). Players scoring well above what their targets and carries support are marked down, since that gap has tended to shrink the next season. Picks hold their value. The range comes from how far real players landed from this kind of forecast between 2010 and 2025, and the chance leans toward the next season or the third season depending on whether the team is a contender or a rebuilder. It does not know about injuries or role changes, so treat it as a lean, not a forecast.
           </div>
         </div>
       )}

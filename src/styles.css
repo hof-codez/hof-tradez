@@ -143,3 +143,4 @@ details summary{cursor:pointer}
 .pickrow{display:flex;align-items:center;gap:10px;cursor:pointer}
 .pickrow input{width:22px;height:22px;flex:none;accent-color:var(--accent,#d9962f)}
 .pickrow .grow{flex:1;min-width:0}
+.btn.ghost.on { background: var(--accent, #4a90e2); color: #fff; border-color: transparent; }

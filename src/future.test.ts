@@ -41,3 +41,17 @@ test('a player scoring well above his usage is marked down, one below is marked 
   const r = futureFor([hot], [cold], 0.3, 'you', fit as any);
   assert.ok(r.notes.some((n) => n.includes('bounce back')));
 });
+
+test('stance weights shift the chance and a range is returned', async () => {
+  const { futureFor, stanceFromRecord } = await import('./future.ts');
+  const old = { id: 'o', kind: 'player', name: 'Old', position: 'RB', age: 29, value: 3000 } as any;
+  const young = { id: 'y', kind: 'player', name: 'Young', position: 'WR', age: 22, value: 3000 } as any;
+  const win = futureFor([young], [old], 0, 'you', null, 'win');
+  const build = futureFor([young], [old], 0, 'you', null, 'build');
+  assert.ok(win.chance! > build.chance!);
+  assert.ok(win.range!.lo < win.range!.hi);
+  assert.equal(stanceFromRecord({ rank: 1, size: 12 }), 'win');
+  assert.equal(stanceFromRecord({ rank: 12, size: 12 }), 'build');
+  assert.equal(stanceFromRecord({ rank: 6, size: 12 }), 'balanced');
+  assert.equal(stanceFromRecord(null), 'balanced');
+});

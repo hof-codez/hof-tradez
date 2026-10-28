@@ -1,6 +1,7 @@
 import { sideTotal } from './trade.ts';
 import type { FitData, PlayerStatus } from './lineup.ts';
 import type { Asset } from './types.ts';
+import { SPREAD, bandOf } from './spread.ts';
 
 // "Fit for the future": how a trade changes a team's dynasty value over the next few seasons.
 // Each player's value is projected forward with an expected-production curve by position and age:
@@ -57,10 +58,40 @@ export interface FutureResult {
   rows: { years: number; get: number; give: number }[]; // years 0 = today
   shift: number; // change in (get - give) from today to two seasons out, as a share of what is given today
   notes: string[];
+  stance: Stance;
+  chance: number | null; // weighted chance the trade leaves you ahead, 0 to 1
+  range: { lo: number; hi: number } | null; // likely change in net value two seasons out (80% band)
 }
 
-export function futureFor(give: Asset[], get: Asset[], starPremium: number, who: 'you' | 'them' = 'you', fit?: FitData | null): FutureResult {
-  if (!give.length && !get.length) return { label: 'unknown', rows: [], shift: 0, notes: [] };
+export type Stance = 'win' | 'balanced' | 'build';
+// how much each season ahead (1, 2, 3) counts for a team in this situation
+export const STANCE_WEIGHTS: Record<Stance, number[]> = { win: [0.6, 0.3, 0.1], balanced: [0.25, 0.5, 0.25], build: [0.1, 0.3, 0.6] };
+export const STANCE_LABEL: Record<Stance, string> = { win: 'Win now', balanced: 'Balanced', build: 'Build' };
+
+export function stanceFromRecord(r?: { rank: number; size: number } | null): Stance {
+  if (!r || !r.size) return 'balanced';
+  const third = r.size / 3;
+  return r.rank <= third ? 'win' : r.rank > r.size - third ? 'build' : 'balanced';
+}
+
+const normCdf = (z: number) => {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989423 * Math.exp((-z * z) / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return z > 0 ? 1 - p : p;
+};
+
+// spread of one asset's value k seasons out, in value points
+export function assetSd(a: Asset, k: number, value: number): number {
+  if (a.kind === 'pick') return value * 0.15;
+  const pos = a.position && ['QB', 'RB', 'WR', 'TE'].includes(a.position) ? a.position : 'WR';
+  const [lo, hi] = SPREAD[k]?.[`${pos}|${bandOf(a.age ?? 26)}`] ?? [0.5, 1.6];
+  const sigma = Math.log(hi / lo) / 2.56; // 10th to 90th is 2.56 standard deviations
+  return value * sigma * VALUE_STEEPNESS;
+}
+
+export function futureFor(give: Asset[], get: Asset[], starPremium: number, who: 'you' | 'them' = 'you', fit?: FitData | null, stance: Stance = 'balanced'): FutureResult {
+  if (!give.length && !get.length) return { label: 'unknown', rows: [], shift: 0, notes: [], stance, chance: null, range: null };
   const rows = [0, ...HORIZONS].map((y) => ({
     years: y,
     get: sideTotal(at(get, y, fit), starPremium),
@@ -99,7 +130,23 @@ export function futureFor(give: Asset[], get: Asset[], starPremium: number, who:
   const gotPicks = get.filter((x) => x.kind === 'pick').length;
   const gavePicks = give.filter((x) => x.kind === 'pick').length;
   if (gotPicks > gavePicks) notes.push('Picks hold their value, which steadies the long view');
-  return { label, rows, shift, notes: notes.slice(0, 5) };
+  // chance of being ahead, weighted by the team's situation, and the likely range two seasons out
+  const sdNet = (k: number) => {
+    let v = 0;
+    for (const a of at(get, k, fit)) v += assetSd(a, k, a.value) ** 2;
+    for (const a of at(give, k, fit)) v += assetSd(a, k, a.value) ** 2;
+    return Math.sqrt(v);
+  };
+  const w = STANCE_WEIGHTS[stance];
+  let chance = 0;
+  for (const k of HORIZONS) {
+    const r = rows.find((x) => x.years === k)!;
+    const sd = sdNet(k);
+    chance += w[k - 1] * (sd > 0 ? normCdf((r.get - r.give) / sd) : r.get >= r.give ? 1 : 0);
+  }
+  const sd2 = sdNet(2);
+  const range = { lo: two.get - two.give - 1.28 * sd2 - now, hi: two.get - two.give + 1.28 * sd2 - now };
+  return { label, rows, shift, notes: notes.slice(0, 5), stance, chance, range };
 }
 
 export function futureHeadline(r: FutureResult, who: string): string {

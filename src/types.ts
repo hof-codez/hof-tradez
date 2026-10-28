@@ -44,6 +44,7 @@ export interface LeagueTeam {
   traits: Trait[];
   lean: Record<string, number>;
   trades?: number; // recent league trades this team was part of (from the trade feed)
+  record?: { w: number; l: number; t: number; rank: number; size: number } | null;
 }
 
 export interface SelfPreview {
