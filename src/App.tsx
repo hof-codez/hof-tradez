@@ -14,7 +14,7 @@ import RulesTab from './RulesTab.tsx';
 import type { FitData } from './lineup.ts';
 import { brownBellToken, linkTarget, rememberSignOut, takeLinkToken } from './handoff.ts';
 
-type Tab = 'values' | 'trade' | 'history' | 'owners' | 'vote' | 'rules';
+type Tab = 'values' | 'trade' | 'history' | 'owners' | 'vote';
 interface Cached { meta: ValuesPayload; assets: Asset[] }
 
 export default function App() {
@@ -34,6 +34,7 @@ export default function App() {
     if (shared) save('tc:token', shared);
     return shared;
   });
+  const [showRules, setShowRules] = useState(false);
   const [tab, setTab] = useState<Tab>(() => (linkTarget() === 'history' ? 'history' : 'values'));
   const [history, setHistory] = useState<HistoryTrade[] | null>(null);
   const [data, setData] = useState<Cached | null>(() => load<Cached | null>('tc:values', null));
@@ -133,6 +134,7 @@ export default function App() {
           <div className="meta">{teamName}</div>
         </div>
         <div>
+          <button className="x" onClick={() => setShowRules((v) => !v)}>{showRules ? 'Close' : 'Rules'}</button>{' '}
           <a className="x" href="https://hof-codez.github.io/brownbell/">Brown Bell</a>{' '}
           <button className="x" onClick={() => signOut(true)}>Sign out</button>
         </div>
@@ -145,21 +147,21 @@ export default function App() {
       )}
       {err && data && <div className="banner">{err}</div>}
       {!data && !err && <p className="sub pad">Loading values…</p>}
-      {data && tab === 'values' && <ValuesTab assets={data.assets} meta={data.meta} />}
-      {data && tab === 'trade' && (
+      {data && !showRules && tab === 'values' && <ValuesTab assets={data.assets} meta={data.meta} />}
+      {data && !showRules && tab === 'trade' && (
         <TradeTab fit={fit} assets={data.assets} starPremium={data.meta.starPremium} teams={leagueWithTrades} insights={insights} myTeamId={teamId} />
       )}
-      {data && tab === 'owners' && <OwnersTab teams={leagueWithTrades} insights={insights} myTeamId={teamId} />}
-      {data && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} onVoted={reloadValues} />}
-      {data && tab === 'history' && (
+      {data && !showRules && tab === 'owners' && <OwnersTab teams={leagueWithTrades} insights={insights} myTeamId={teamId} />}
+      {data && !showRules && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} onVoted={reloadValues} />}
+      {data && !showRules && tab === 'history' && (
         <HistoryTab token={token} myTeamId={teamId} trades={history} setTrades={setHistory} votesLeft={votesLeft} onVotesLeft={setVotesLeft} onVoted={reloadValues} />
       )}
-      {data && tab === 'rules' && <RulesTab maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} starPremium={data.meta.starPremium} />}
+      {data && showRules && <RulesTab maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} starPremium={data.meta.starPremium} />}
       <nav>
-        {(['values', 'trade', 'history', 'owners', 'vote', 'rules'] as Tab[]).map((t) => (
-          <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
-            <span className="ico">{t === 'values' ? '▤' : t === 'trade' ? '⇄' : t === 'history' ? '↺' : t === 'owners' ? '☰' : t === 'rules' ? '?' : '✓'}</span>
-            {t === 'values' ? 'Values' : t === 'trade' ? 'Trade' : t === 'history' ? 'History' : t === 'owners' ? 'Owners' : t === 'rules' ? 'Rules' : `Vote${votesLeft > 0 ? ` (${votesLeft})` : ''}`}
+        {(['values', 'trade', 'history', 'owners', 'vote'] as Tab[]).map((t) => (
+          <button key={t} className={tab === t ? 'on' : ''} onClick={() => { setTab(t); setShowRules(false); }}>
+            <span className="ico">{t === 'values' ? '▤' : t === 'trade' ? '⇄' : t === 'history' ? '↺' : t === 'owners' ? '☰' : '✓'}</span>
+            {t === 'values' ? 'Values' : t === 'trade' ? 'Trade' : t === 'history' ? 'History' : t === 'owners' ? 'Owners' : `Vote${votesLeft > 0 ? ` (${votesLeft})` : ''}`}
           </button>
         ))}
       </nav>
