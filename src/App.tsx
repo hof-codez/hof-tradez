@@ -147,7 +147,7 @@ export default function App() {
       )}
       {err && data && <div className="banner">{err}</div>}
       {!data && !err && <p className="sub pad">Loading values…</p>}
-      <div hidden={showRules}>
+      <div style={{ display: showRules ? 'none' : 'contents' }}>
       {data && tab === 'values' && <ValuesTab assets={data.assets} meta={data.meta} />}
       {data && tab === 'trade' && (
         <TradeTab fit={fit} assets={data.assets} starPremium={data.meta.starPremium} teams={leagueWithTrades} insights={insights} myTeamId={teamId} />
