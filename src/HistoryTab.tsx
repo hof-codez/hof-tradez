@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { api, friendly } from './api.ts';
 import { consensusFor, outcomeWord } from './history.ts';
-import type { HistoryAsset, HistoryTrade } from './types.ts';
+import { tradeStory, type SideStory } from './tradeStory.ts';
+import type { HistoryAsset, HistoryDetail, HistoryTrade, SnapPlayer } from './types.ts';
 
 type Filter = 'all' | 'pending';
 
@@ -28,6 +29,21 @@ export default function HistoryTab({
   const [filter, setFilter] = useState<Filter>('all');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  const [open, setOpen] = useState<string | null>(null);
+  const [details, setDetails] = useState<Record<string, HistoryDetail | 'loading' | 'error'>>({});
+
+  async function toggleWhy(t: HistoryTrade) {
+    if (open === t.id) { setOpen(null); return; }
+    setOpen(t.id);
+    if (details[t.id] && details[t.id] !== 'error') return;
+    setDetails((d) => ({ ...d, [t.id]: 'loading' }));
+    try {
+      const r = await api.historyDetail(token, t.id);
+      setDetails((d) => ({ ...d, [t.id]: r }));
+    } catch {
+      setDetails((d) => ({ ...d, [t.id]: 'error' }));
+    }
+  }
 
   async function vote(t: HistoryTrade, outcome: 'a' | 'even' | 'b') {
     setBusy(t.id);
@@ -87,6 +103,11 @@ export default function HistoryTab({
             <div className="meta">{c.detail}</div>
           </div>
 
+          <button className="btn ghost" onClick={() => toggleWhy(t)}>
+            {open === t.id ? 'Hide the thinking' : 'Why would they do this?'}
+          </button>
+          {open === t.id && <Why d={details[t.id]} nameA={t.teamA.name} nameB={t.teamB.name} />}
+
           {t.mine !== null && <div className="meta">You voted: {outcomeWord(t.mine) === 'a' ? `${t.teamA.name} got the better deal` : outcomeWord(t.mine) === 'b' ? `${t.teamB.name} got the better deal` : 'Even'}</div>}
           {t.mine === null && !t.canVote && (t.teamA.id === myTeamId || t.teamB.id === myTeamId) && (
             <div className="meta">You were part of this trade, so you can't vote on it.</div>
@@ -106,6 +127,54 @@ export default function HistoryTab({
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function SideBlock({ s }: { s: SideStory }) {
+  return (
+    <div className="why-side">
+      <div className="meta strong">{s.name}</div>
+      <div className="vtitle small">{s.thesis}</div>
+      <div className="meta strong">For</div>
+      {s.pros.map((x) => <div key={x} className="line">+ {x}</div>)}
+      <div className="meta strong">Against</div>
+      {s.cons.map((x) => <div key={x} className="line">- {x}</div>)}
+    </div>
+  );
+}
+
+function Roster({ name, players, moved }: { name: string; players: SnapPlayer[]; moved: Set<string> }) {
+  return (
+    <details>
+      <summary className="meta">{name} before the trade ({players.length} QB/RB/WR/TE)</summary>
+      {players.map((p) => (
+        <div key={p.id} className={`line${moved.has(p.id) ? ' strong' : ''}`}>
+          {p.name} ({p.pos}){p.ppg !== null ? `, ${p.ppg.toFixed(1)} ppg` : ''}{moved.has(p.id) ? ' (in the trade)' : ''}
+        </div>
+      ))}
+    </details>
+  );
+}
+
+function Why({ d, nameA, nameB }: { d: HistoryDetail | 'loading' | 'error' | undefined; nameA: string; nameB: string }) {
+  if (!d || d === 'loading') return <p className="sub">Loading…</p>;
+  if (d === 'error') return <p className="error">Could not load this one. Try again.</p>;
+  if (!d.snapshot) return <p className="sub">No roster snapshot for this trade yet. Snapshots are built during the daily sync.</p>;
+  const story = tradeStory(d, nameA, nameB);
+  const moved = new Set([...d.sideA, ...d.sideB].filter((i) => i.startsWith('p:')).map((i) => i.slice(2)));
+  const s = d.snapshot;
+  return (
+    <div className="why">
+      {story && <SideBlock s={story.a} />}
+      {story && <SideBlock s={story.b} />}
+      <Roster name={nameA} players={s.rosterA} moved={moved} />
+      <Roster name={nameB} players={s.rosterB} moved={moved} />
+      <div className="meta">
+        An estimate, not what either owner said. Rosters are rebuilt from Sleeper's transaction log. Points per game are{' '}
+        {s.basis === 'this' ? `this season through week ${Math.max(1, s.week - 1)}` : "from last season, since the trade came before enough games were played"}.
+        Trade values are today's. {s.injuriesKnown ? 'Injury status was captured near the trade.' : 'Injury status at the time is not available for this trade.'}
+      </div>
     </div>
   );
 }

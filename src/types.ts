@@ -93,3 +93,30 @@ export interface HistoryTrade {
   mine: number | null;
   canVote: boolean;
 }
+
+export interface SnapPlayer {
+  id: string;
+  name: string;
+  pos: string;
+  age: number | null;
+  ppg: number | null;
+  games: number;
+  inj: string | null;
+}
+
+export interface HistoryDetail {
+  snapshot: {
+    season: number;
+    week: number;
+    basis: 'this' | 'last';
+    injuriesKnown: boolean;
+    rosterA: SnapPlayer[];
+    rosterB: SnapPlayer[];
+  } | null;
+  sideA: string[]; // asset ids Team A gave
+  sideB: string[]; // asset ids Team B gave
+  slots: string[];
+  starPremium: number;
+  values: Record<string, number>;
+  assets: Record<string, { id: string; kind: 'player' | 'pick'; name: string; position: string | null; age: number | null; pickYear: number | null; pickRound: number | null }>;
+}

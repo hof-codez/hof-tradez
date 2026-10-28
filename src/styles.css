@@ -134,3 +134,8 @@ nav button { font-size: 11px; }
 .verdict.slim { padding: 10px; margin-top: 8px; }
 .vtitle.small { font-size: 15px; }
 .choices { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+
+.why{margin-top:10px;display:grid;gap:10px}
+.why-side{border-top:1px solid var(--line,#2a2f3a);padding-top:8px}
+.btn.ghost{background:transparent;border:1px solid var(--line,#2a2f3a)}
+details summary{cursor:pointer}

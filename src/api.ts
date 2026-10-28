@@ -1,6 +1,6 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config.ts';
 import type { FitData } from './lineup.ts';
-import type { DeskItem, HistoryTrade, LeagueTeam, SelfPreview, TeamOption, ValuesPayload, VoteResult } from './types.ts';
+import type { DeskItem, HistoryDetail, HistoryTrade, LeagueTeam, SelfPreview, TeamOption, ValuesPayload, VoteResult } from './types.ts';
 
 export class ApiError extends Error {
   code: string;
@@ -47,6 +47,7 @@ export const api = {
   me: (t: string) => tc<{ teamId: string; name: string; votesLeft: number; preview: SelfPreview }>('me', t),
   league: (t: string) => tc<{ teams: LeagueTeam[] }>('league', t),
   values: (t: string, since?: number) => tc<ValuesPayload>('values', t, { since }),
+  historyDetail: (t: string, id: string) => tc<HistoryDetail>('history_detail', t, { id }),
   history: (t: string) => tc<{ trades: HistoryTrade[] }>('history', t),
   fitData: (t: string) => tc<FitData>('fit_data', t),
   desk: (t: string) => tc<DeskItem>('desk', t),
