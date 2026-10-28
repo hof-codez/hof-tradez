@@ -82,7 +82,7 @@ export default function TradeTab({
         }
         return true;
       })
-      .slice(0, 60);
+      .slice(0, scope === 'picks' ? 200 : 60);
   }, [assets, used, q, scope, mine, theirs, partner]);
 
   // who holds each pick right now
@@ -91,6 +91,18 @@ export default function TradeTab({
     for (const t of teams) for (const id of t.roster) if (id.startsWith('pick:')) m.set(id, t.teamId === myTeamId ? 'You' : t.name);
     return m;
   }, [teams, myTeamId]);
+
+  // Picks tab: you first, then your partner, then everyone else; within an owner by year, round, original team
+  const shown = useMemo(() => {
+    if (scope !== 'picks') return options;
+    const rank = (id: string) => (mine.has(id) ? 0 : theirs.has(id) ? 1 : 2);
+    return [...options].sort((x, y) =>
+      rank(x.id) - rank(y.id)
+      || (holder.get(x.id) ?? '').localeCompare(holder.get(y.id) ?? '')
+      || (x.pickYear ?? 0) - (y.pickYear ?? 0)
+      || (x.pickRound ?? 0) - (y.pickRound ?? 0)
+      || x.name.localeCompare(y.name));
+  }, [options, scope, mine, theirs, holder]);
 
   function add(x: Asset, side: 'A' | 'B') {
     (side === 'A' ? setA : setB)((s) => [...s, x]);
@@ -232,10 +244,17 @@ export default function TradeTab({
             )}
             <input className="input" autoFocus placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
             <div className="list scroll">
-              {options.map((x) => (
-                <AssetRow key={x.id} a={x} note={x.kind === 'pick' && holder.get(x.id) ? `Held by ${holder.get(x.id)}` : undefined} onClick={() => add(x, picking)} right={<span className="meta">{x.value.toLocaleString()}</span>} />
-              ))}
-              {options.length === 0 && <p className="sub pad">Nothing here.</p>}
+              {shown.map((x, i) => {
+                const who = holder.get(x.id);
+                const head = scope === 'picks' && x.kind === 'pick' && who && who !== holder.get(shown[i - 1]?.id ?? '');
+                return (
+                  <div key={x.id}>
+                    {head && <div className="meta strong pad-top">{who === 'You' ? 'Your picks' : `${who}'s picks`}</div>}
+                    <AssetRow a={x} note={x.kind === 'pick' && who ? `Held by ${who}` : undefined} onClick={() => add(x, picking)} right={<span className="meta">{x.value.toLocaleString()}</span>} />
+                  </div>
+                );
+              })}
+              {shown.length === 0 && <p className="sub pad">Nothing here.</p>}
             </div>
           </div>
         </div>
