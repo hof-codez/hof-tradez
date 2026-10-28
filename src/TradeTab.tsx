@@ -3,6 +3,7 @@ import type { Asset, LeagueTeam } from './types.ts';
 import type { RosterInsight } from './insight.ts';
 import { AVAILABILITY_TEXT, availability, ideasFor, medianTrades, partnerNotes, rosterAssets } from './insight.ts';
 import { OUT_WEEKS, fitFor, fitHeadline } from './lineup.ts';
+import { futureFor, futureHeadline } from './future.ts';
 import type { FitData } from './lineup.ts';
 import { balanceIdeas, consensusText, judge } from './trade.ts';
 import { AssetRow } from './ui.tsx';
@@ -63,6 +64,9 @@ export default function TradeTab({
     if (!partner || !fit || (!a.length && !b.length)) return null;
     return fitFor(rosterAssets(partner, byId), b, a, fit, 'them');
   }, [partner, fit, a, b, byId]);
+  // Dynasty view: how each side's value holds up over the next few seasons
+  const futureMine = useMemo(() => futureFor(a, b, starPremium, 'you'), [a, b, starPremium]);
+  const futureTheirs = useMemo(() => (partner ? futureFor(b, a, starPremium, 'them') : null), [partner, a, b, starPremium]);
   const myNeeds = me ? insights.get(me.teamId)?.need ?? [] : [];
 
   const mine = useMemo(() => new Set(me?.roster ?? []), [me]);
@@ -178,6 +182,30 @@ export default function TradeTab({
           )}
           <div className="meta small">
             Built from this season's points per game, injuries and byes for the rest of the regular season. A player who is out is assumed to miss {OUT_WEEKS} weeks, since return dates are not available.
+          </div>
+        </div>
+      )}
+
+      {futureMine.label !== 'unknown' && (
+        <div className="card">
+          <h2>Fit for the future</h2>
+          <div className="meta strong">{futureHeadline(futureMine, 'Your')}</div>
+          {futureMine.notes.map((n) => <div key={n} className="why">{n}</div>)}
+          <div className="meta">
+            {futureMine.rows.map((r) => (
+              <div key={r.years} className="line">
+                {r.years === 0 ? 'Today' : `In ${r.years} season${r.years > 1 ? 's' : ''}`}: you get {r.get.toLocaleString()}, you give {r.give.toLocaleString()}
+              </div>
+            ))}
+          </div>
+          {partner && futureTheirs && futureTheirs.label !== 'unknown' && (
+            <>
+              <div className="meta strong pad-top">{futureHeadline(futureTheirs, `${partner.name}'s`)}</div>
+              {futureTheirs.notes.map((n) => <div key={n} className="why">{n}</div>)}
+            </>
+          )}
+          <div className="meta small">
+            An age and position estimate. Each player's value is moved along a typical dynasty curve (running backs fade fastest, young receivers and tight ends tend to grow). Picks hold their value. It does not know about injuries or role changes, so treat it as a lean, not a forecast.
           </div>
         </div>
       )}
