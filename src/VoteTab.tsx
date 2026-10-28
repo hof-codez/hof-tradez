@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from './api.ts';
 import type { Milestone, SelfPreview, VoteResult } from './types.ts';
 import DeskMode from './DeskMode.tsx';
-import RankMode from './RankMode.tsx';
 
 const EARLY_AT = 10;
 const SOLID_AT = 25;
@@ -24,8 +23,6 @@ function milestoneText(m: Milestone, p: SelfPreview, maxPerDay: number, fullWeig
   return null;
 }
 
-type Mode = 'desk' | 'rank';
-
 export default function VoteTab({
   token,
   votesLeft,
@@ -39,7 +36,6 @@ export default function VoteTab({
   maxPerDay: number;
   fullWeight: number;
 }) {
-  const [mode, setMode] = useState<Mode>('desk');
   const [loaded, setLoaded] = useState(false);
   const [done, setDone] = useState(0);
   const [preview, setPreview] = useState<SelfPreview | null>(null);
@@ -103,8 +99,7 @@ export default function VoteTab({
   return (
     <div className="screen">
       <div className="chips">
-        <button className={`pill${mode === 'desk' ? ' on' : ''}`} onClick={() => setMode('desk')}>Offer Desk</button>
-        <button className={`pill${mode === 'rank' ? ' on' : ''}`} onClick={() => setMode('rank')}>Rank 3</button>
+        <span className="pill on">Offer Desk</span>
         <span className="meta votesleft">{votesLeft} left today</span>
       </div>
       {banner && (
@@ -112,11 +107,7 @@ export default function VoteTab({
           {banner} <span className="meta">(tap to dismiss)</span>
         </div>
       )}
-      {mode === 'desk' ? (
-        <DeskMode key="desk" token={token} votesLeft={votesLeft} onVotesLeft={onVotesLeft} onResult={onResult} onLoaded={onLoaded} />
-      ) : (
-        <RankMode key="rank" token={token} votesLeft={votesLeft} onVotesLeft={onVotesLeft} onResult={onResult} onLoaded={onLoaded} />
-      )}
+      <DeskMode token={token} votesLeft={votesLeft} onVotesLeft={onVotesLeft} onResult={onResult} onLoaded={onLoaded} />
       {readPanel}
     </div>
   );

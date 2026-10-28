@@ -1,5 +1,5 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config.ts';
-import type { BallotAsset, DeskItem, LeagueTeam, SelfPreview, TeamOption, ValuesPayload, VoteResult } from './types.ts';
+import type { DeskItem, LeagueTeam, SelfPreview, TeamOption, ValuesPayload, VoteResult } from './types.ts';
 
 export class ApiError extends Error {
   code: string;
@@ -46,9 +46,6 @@ export const api = {
   me: (t: string) => tc<{ teamId: string; name: string; votesLeft: number; preview: SelfPreview }>('me', t),
   league: (t: string) => tc<{ teams: LeagueTeam[] }>('league', t),
   values: (t: string, since?: number) => tc<ValuesPayload>('values', t, { since }),
-  ballot: (t: string) => tc<{ votesLeft: number; assets: BallotAsset[] }>('ballot', t),
-  vote: (t: string, keep: string, trade: string, cut: string) =>
-    tc<VoteResult>('vote', t, { keep, trade, cut }),
   desk: (t: string) => tc<DeskItem>('desk', t),
   deskVote: (t: string, payload: Record<string, unknown>) => tc<VoteResult>('desk_vote', t, payload),
   // Reuses Brown Bell's existing claim function: same PINs, same device tokens.
