@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, friendly } from './api.ts';
 import { clear, load, save } from './store.ts';
-import type { Asset, ValuesPayload } from './types.ts';
+import { useMemo } from 'react';
+import type { Asset, LeagueTeam, ValuesPayload } from './types.ts';
+import { computeInsights } from './insight.ts';
+import OwnersTab from './OwnersTab.tsx';
 import Claim from './Claim.tsx';
 import ValuesTab from './ValuesTab.tsx';
 import TradeTab from './TradeTab.tsx';
 import VoteTab from './VoteTab.tsx';
 
-type Tab = 'values' | 'trade' | 'vote';
+type Tab = 'values' | 'trade' | 'owners' | 'vote';
 interface Cached { meta: ValuesPayload; assets: Asset[] }
 
 export default function App() {
@@ -16,12 +19,15 @@ export default function App() {
   const [data, setData] = useState<Cached | null>(() => load<Cached | null>('tc:values', null));
   const [teamName, setTeamName] = useState<string>(() => load('tc:team', ''));
   const [votesLeft, setVotesLeft] = useState(0);
+  const [teamId, setTeamId] = useState<string>(() => load('tc:teamId', ''));
+  const [league, setLeague] = useState<LeagueTeam[]>([]);
   const [err, setErr] = useState('');
 
   const signOut = useCallback(() => {
     clear('tc:token');
     clear('tc:values');
     clear('tc:team');
+    clear('tc:teamId');
     setToken(null);
     setData(null);
   }, []);
@@ -43,7 +49,11 @@ export default function App() {
       }
       const me = await api.me(t);
       setTeamName(me.name);
+      setTeamId(me.teamId);
       save('tc:team', me.name);
+      save('tc:teamId', me.teamId);
+      // owner profiles are a bonus: if this fails the rest of the app still works
+      api.league(t).then((r) => setLeague(r.teams)).catch(() => {});
     } catch (e) {
       if (e instanceof ApiError && e.code === 'not_signed_in') return signOut();
       setErr(friendly(e));
@@ -53,6 +63,11 @@ export default function App() {
   useEffect(() => {
     if (token) refresh(token);
   }, [token, refresh]);
+
+  const insights = useMemo(
+    () => computeInsights(league, new Map((data?.assets ?? []).map((a) => [a.id, a]))),
+    [league, data],
+  );
 
   if (!token) {
     return <Claim onDone={(t) => { save('tc:token', t); setToken(t); }} />;
@@ -76,13 +91,16 @@ export default function App() {
       {err && data && <div className="banner">{err}</div>}
       {!data && !err && <p className="sub pad">Loading values…</p>}
       {data && tab === 'values' && <ValuesTab assets={data.assets} meta={data.meta} />}
-      {data && tab === 'trade' && <TradeTab assets={data.assets} starPremium={data.meta.starPremium} />}
+      {data && tab === 'trade' && (
+        <TradeTab assets={data.assets} starPremium={data.meta.starPremium} teams={league} insights={insights} myTeamId={teamId} />
+      )}
+      {data && tab === 'owners' && <OwnersTab teams={league} insights={insights} myTeamId={teamId} />}
       {data && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} />}
       <nav>
-        {(['values', 'trade', 'vote'] as Tab[]).map((t) => (
+        {(['values', 'trade', 'owners', 'vote'] as Tab[]).map((t) => (
           <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
-            <span className="ico">{t === 'values' ? '▤' : t === 'trade' ? '⇄' : '✓'}</span>
-            {t === 'values' ? 'Values' : t === 'trade' ? 'Trade' : `Vote${votesLeft > 0 ? ` (${votesLeft})` : ''}`}
+            <span className="ico">{t === 'values' ? '▤' : t === 'trade' ? '⇄' : t === 'owners' ? '☰' : '✓'}</span>
+            {t === 'values' ? 'Values' : t === 'trade' ? 'Trade' : t === 'owners' ? 'Owners' : `Vote${votesLeft > 0 ? ` (${votesLeft})` : ''}`}
           </button>
         ))}
       </nav>

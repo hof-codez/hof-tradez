@@ -18,10 +18,12 @@ export function PosChip({ a }: { a: BallotAsset | Asset }) {
 export function AssetRow({
   a,
   right,
+  note,
   onClick,
 }: {
   a: BallotAsset | Asset;
   right?: React.ReactNode;
+  note?: string;
   onClick?: () => void;
 }) {
   return (
@@ -30,6 +32,7 @@ export function AssetRow({
       <div className="grow">
         <div className="name">{assetLabel(a)}</div>
         <div className="meta">{assetMeta(a)}</div>
+        {note && <div className="why">{note}</div>}
       </div>
       {right}
     </div>

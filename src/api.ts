@@ -1,5 +1,5 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config.ts';
-import type { BallotAsset, TeamOption, ValuesPayload } from './types.ts';
+import type { BallotAsset, LeagueTeam, TeamOption, ValuesPayload } from './types.ts';
 
 export class ApiError extends Error {
   code: string;
@@ -44,6 +44,7 @@ const tc = <T,>(action: string, token: string | null, extra: Record<string, unkn
 export const api = {
   teams: () => tc<{ teams: TeamOption[] }>('teams', null),
   me: (t: string) => tc<{ teamId: string; name: string; votesLeft: number }>('me', t),
+  league: (t: string) => tc<{ teams: LeagueTeam[] }>('league', t),
   values: (t: string, since?: number) => tc<ValuesPayload>('values', t, { since }),
   ballot: (t: string) => tc<{ votesLeft: number; assets: BallotAsset[] }>('ballot', t),
   vote: (t: string, keep: string, trade: string, cut: string) =>

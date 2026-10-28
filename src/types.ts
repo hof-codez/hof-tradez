@@ -28,3 +28,18 @@ export interface TeamOption {
   name: string;
   claimed: boolean;
 }
+
+export interface Trait {
+  key: string;
+  label: string;
+  detail: string;
+}
+
+export interface LeagueTeam {
+  teamId: string;
+  name: string;
+  roster: string[];
+  confidence: 'none' | 'early' | 'solid';
+  traits: Trait[];
+  lean: Record<string, number>;
+}
