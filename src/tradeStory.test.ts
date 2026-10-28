@@ -33,3 +33,19 @@ test('always gives something to show on both lists', () => {
   const s = tradeStory(detail(), 'A', 'B')!;
   for (const side of [s.a, s.b]) { assert.ok(side.pros.length > 0); assert.ok(side.cons.length > 0); }
 });
+
+test('a trade that covers a bye-week hole says so', () => {
+  const d: HistoryDetail = {
+    snapshot: {
+      season: 2026, week: 8, basis: 'this', injuriesKnown: false,
+      // A has one TE, on bye in week 9. B's TE is not.
+      rosterA: [P('qb', 'QB', 20), { ...P('te1', 'TE', 9), bye: 9 }, P('rb1', 'RB', 15), P('wr1', 'WR', 14), P('wr2', 'WR', 13)],
+      rosterB: [P('qb2', 'QB', 18), { ...P('te2', 'TE', 7), bye: 5 }, P('rb2', 'RB', 12), P('wr3', 'WR', 12), P('x', 'WR', 5)],
+    },
+    sideA: ['p:wr2'], sideB: ['p:te2'],
+    slots: ['QB', 'RB', 'WR', 'TE'], starPremium: 0.3,
+    values: { 'p:wr2': 1500, 'p:te2': 1500 }, assets: {},
+  };
+  const s = tradeStory(d, 'A', 'B')!;
+  assert.ok(s.a.pros.some((x) => x.includes('week 9 bye')), s.a.pros.join(' | '));
+});

@@ -173,7 +173,7 @@ function Why({ d, nameA, nameB }: { d: HistoryDetail | 'loading' | 'error' | und
       <div className="meta">
         An estimate, not what either owner said. Rosters are rebuilt from Sleeper's transaction log. Points per game are{' '}
         {s.basis === 'this' ? `this season through week ${Math.max(1, s.week - 1)}` : "from last season, since the trade came before enough games were played"}.
-        Trade values are today's. {s.injuriesKnown ? 'Injury status was captured near the trade.' : 'Injury status at the time is not available for this trade.'}
+        Trade values are today's. Bye weeks are only used for trades from this season. {s.injuriesKnown ? 'Injury status was captured near the trade.' : 'Injury status at the time is not available for this trade.'}
       </div>
     </div>
   );

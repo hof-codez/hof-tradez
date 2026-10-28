@@ -40,7 +40,7 @@ function sideStory(
   const fit: FitData = {
     slots: d.slots, lastWeek: snap.week, currentWeek: snap.week,
     players: Object.fromEntries([...mine, ...theirs].map((p) => [p.id, {
-      ppg: p.ppg, games: p.games, inj: snap.injuriesKnown ? p.inj : null, bye: null,
+      ppg: p.ppg, games: p.games, inj: snap.injuriesKnown ? p.inj : null, bye: p.bye ?? null,
     }])),
   };
   const gaveSet = new Set(gavePlayers.map((p) => p.id));
@@ -66,6 +66,24 @@ function sideStory(
   const basis = snap.basis === 'this' ? `points per game through week ${Math.max(1, snap.week - 1)}` : "last season's points per game";
   const ppgText = (p: SnapPlayer) => (p.ppg === null ? 'no recent games' : `${p.ppg.toFixed(1)} ppg`);
 
+  // Bye weeks over the next six weeks: does the trade cover a week with nobody to start, or open one?
+  const slotName = (slot: string) => (slot.includes('FLEX') ? 'flex spot' : `${slot} spot`);
+  const byeCover: string[] = [];
+  const byeOpen: string[] = [];
+  for (let w = snap.week; w <= Math.min(18, snap.week + 5); w++) {
+    const onBye = mine.filter((p) => p.bye === w);
+    if (!onBye.length) continue;
+    const hb = bestLineup(before, fit, w).filter((x) => !x.id);
+    const ha = bestLineup(after, fit, w).filter((x) => !x.id);
+    if (ha.length < hb.length) {
+      const incoming = gotPlayers.filter((p) => p.bye !== w).map((p) => p.name).slice(0, 2).join(' and ');
+      byeCover.push(`Covers the week ${w} bye: ${onBye.map((p) => p.name).join(', ')} is out that week and there was no one else to fill the ${slotName(hb[0].slot)}${incoming ? `, so ${incoming} can play` : ''}`);
+    } else if (ha.length > hb.length) {
+      byeOpen.push(`Leaves a hole in week ${w} when ${onBye.map((p) => p.name).join(', ')} is on bye`);
+    }
+  }
+  const sameBye = gotPlayers.filter((p) => p.bye && mine.some((m) => m.pos === p.pos && m.bye === p.bye && startedBefore.has(m.id)));
+
   const pros: string[] = [];
   const cons: string[] = [];
 
@@ -74,6 +92,7 @@ function sideStory(
     pros.push(`Lineup gets stronger, about +${delta.toFixed(1)} points a week (${basis})${newStarters.length ? `. ${newStarters.map((p) => `${p.name} (${p.pos}, ${ppgText(p)})`).join(', ')} would start` : ''}`);
   }
   if (holesAfter < holesBefore) pros.push('Fills an open starting spot that had no one to play');
+  if (byeCover.length) pros.push(byeCover[0]);
   if (pct >= 0.08) pros.push(`Takes in more trade value by today's numbers (about ${Math.round(pct * 100)}% more)`);
   const gaveStarters = gavePlayers.filter((p) => startedBefore.has(p.id));
   if (gavePlayers.length && !gaveStarters.length && delta > -1) pros.push('Gave up players who were not starting, so the lineup cost is small');
@@ -92,6 +111,8 @@ function sideStory(
 
   if (delta <= -1) cons.push(`Lineup gets weaker, about -${Math.abs(delta).toFixed(1)} points a week (${basis})`);
   if (holesAfter > holesBefore) cons.push('Leaves a starting spot with no one to play');
+  if (byeOpen.length) cons.push(byeOpen[0]);
+  if (sameBye.length) cons.push(`${sameBye[0].name} shares a bye week (${sameBye[0].bye}) with a starter at the same position`);
   if (pct <= -0.08) cons.push(`Gives up more trade value by today's numbers (about ${Math.round(Math.abs(pct) * 100)}% less coming back)`);
   if (gaveStarters.length) cons.push(`Gives up ${gaveStarters.length > 1 ? 'starters' : 'a starter'}: ${gaveStarters.map((p) => `${p.name} (${p.pos}, ${ppgText(p)})`).join(', ')}`);
   if (ageIn !== null && ageOut !== null && ageIn >= ageOut + 2) cons.push(`Gets older (average age ${ageIn.toFixed(0)} coming in, ${ageOut.toFixed(0)} going out)`);
@@ -103,12 +124,13 @@ function sideStory(
   }
 
   let thesis: string;
-  if (delta >= 1) thesis = 'Likely thinking: strengthen the weekly lineup';
-  else if (pct >= 0.08 && delta <= -1) thesis = 'Likely thinking: give up some lineup strength for more long-term value';
-  else if (pct >= 0.08) thesis = 'Likely thinking: add value';
-  else if ((ageIn !== null && ageOut !== null && ageIn <= ageOut - 2) || (gotPicks.length && !gavePicks.length)) thesis = 'Likely thinking: get younger and build for later';
-  else if (delta <= -1) thesis = 'Likely thinking: not clear from the numbers, the lineup takes a hit';
-  else thesis = 'Likely thinking: a roughly even swap that is hard to explain from the numbers';
+  if (delta >= 1) thesis = 'Potential thinking: strengthen the weekly lineup';
+  else if (byeCover.length) thesis = 'Potential thinking: cover a bye-week hole at a position with no other starter';
+  else if (pct >= 0.08 && delta <= -1) thesis = 'Potential thinking: give up some lineup strength for more long-term value';
+  else if (pct >= 0.08) thesis = 'Potential thinking: add value';
+  else if ((ageIn !== null && ageOut !== null && ageIn <= ageOut - 2) || (gotPicks.length && !gavePicks.length)) thesis = 'Potential thinking: get younger and build for later';
+  else if (delta <= -1) thesis = 'Potential thinking: not clear from the numbers, the lineup takes a hit';
+  else thesis = 'Potential thinking: a roughly even swap that is hard to explain from the numbers';
 
   return {
     name, thesis,

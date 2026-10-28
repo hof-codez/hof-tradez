@@ -102,6 +102,7 @@ export interface SnapPlayer {
   ppg: number | null;
   games: number;
   inj: string | null;
+  bye?: number | null;
 }
 
 export interface HistoryDetail {
