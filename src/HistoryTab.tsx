@@ -7,7 +7,7 @@ import type { HistoryAsset, HistoryDetail, HistoryTrade, SnapPlayer } from './ty
 type Filter = 'all' | 'pending';
 
 const label = (a: HistoryAsset) =>
-  a.pickYear ? `${a.pickYear} round ${a.pickRound} pick` : `${a.name}${a.position ? ` (${a.position})` : ''}`;
+  a.pickYear ? a.name : `${a.name}${a.position ? ` (${a.position})` : ''}`;
 
 export default function HistoryTab({
   token,

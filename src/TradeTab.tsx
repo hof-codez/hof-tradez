@@ -75,11 +75,22 @@ export default function TradeTab({
         if (term && !x.name.toLowerCase().includes(term)) return false;
         if (scope === 'mine') return mine.has(x.id);
         if (scope === 'theirs') return theirs.has(x.id);
-        if (scope === 'picks') return x.kind === 'pick';
+        if (scope === 'picks') {
+          if (x.kind !== 'pick') return false;
+          // with a trade partner, only picks the two of you hold can change hands
+          return !partner || mine.has(x.id) || theirs.has(x.id);
+        }
         return true;
       })
       .slice(0, 60);
-  }, [assets, used, q, scope, mine, theirs]);
+  }, [assets, used, q, scope, mine, theirs, partner]);
+
+  // who holds each pick right now
+  const holder = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of teams) for (const id of t.roster) if (id.startsWith('pick:')) m.set(id, t.teamId === myTeamId ? 'You' : t.name);
+    return m;
+  }, [teams, myTeamId]);
 
   function add(x: Asset, side: 'A' | 'B') {
     (side === 'A' ? setA : setB)((s) => [...s, x]);
@@ -214,10 +225,15 @@ export default function TradeTab({
                 </button>
               ))}
             </div>
+            {scope === 'picks' && (
+              <div className="meta">
+                {partner ? `Picks held by you or ${partner.name}. ` : ''}A pick's value follows the original team's record, so a worse record is worth more. It updates as standings change.
+              </div>
+            )}
             <input className="input" autoFocus placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
             <div className="list scroll">
               {options.map((x) => (
-                <AssetRow key={x.id} a={x} onClick={() => add(x, picking)} right={<span className="meta">{x.value.toLocaleString()}</span>} />
+                <AssetRow key={x.id} a={x} note={x.kind === 'pick' && holder.get(x.id) ? `Held by ${holder.get(x.id)}` : undefined} onClick={() => add(x, picking)} right={<span className="meta">{x.value.toLocaleString()}</span>} />
               ))}
               {options.length === 0 && <p className="sub pad">Nothing here.</p>}
             </div>
