@@ -10,10 +10,11 @@ import ValuesTab from './ValuesTab.tsx';
 import TradeTab from './TradeTab.tsx';
 import VoteTab from './VoteTab.tsx';
 import HistoryTab from './HistoryTab.tsx';
+import RulesTab from './RulesTab.tsx';
 import type { FitData } from './lineup.ts';
 import { brownBellToken, linkTarget, rememberSignOut, takeLinkToken } from './handoff.ts';
 
-type Tab = 'values' | 'trade' | 'history' | 'owners' | 'vote';
+type Tab = 'values' | 'trade' | 'history' | 'owners' | 'vote' | 'rules';
 interface Cached { meta: ValuesPayload; assets: Asset[] }
 
 export default function App() {
@@ -153,11 +154,12 @@ export default function App() {
       {data && tab === 'history' && (
         <HistoryTab token={token} myTeamId={teamId} trades={history} setTrades={setHistory} votesLeft={votesLeft} onVotesLeft={setVotesLeft} onVoted={reloadValues} />
       )}
+      {data && tab === 'rules' && <RulesTab maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} starPremium={data.meta.starPremium} />}
       <nav>
-        {(['values', 'trade', 'history', 'owners', 'vote'] as Tab[]).map((t) => (
+        {(['values', 'trade', 'history', 'owners', 'vote', 'rules'] as Tab[]).map((t) => (
           <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
-            <span className="ico">{t === 'values' ? '▤' : t === 'trade' ? '⇄' : t === 'history' ? '↺' : t === 'owners' ? '☰' : '✓'}</span>
-            {t === 'values' ? 'Values' : t === 'trade' ? 'Trade' : t === 'history' ? 'History' : t === 'owners' ? 'Owners' : `Vote${votesLeft > 0 ? ` (${votesLeft})` : ''}`}
+            <span className="ico">{t === 'values' ? '▤' : t === 'trade' ? '⇄' : t === 'history' ? '↺' : t === 'owners' ? '☰' : t === 'rules' ? '?' : '✓'}</span>
+            {t === 'values' ? 'Values' : t === 'trade' ? 'Trade' : t === 'history' ? 'History' : t === 'owners' ? 'Owners' : t === 'rules' ? 'Rules' : `Vote${votesLeft > 0 ? ` (${votesLeft})` : ''}`}
           </button>
         ))}
       </nav>
