@@ -9,12 +9,28 @@ import Claim from './Claim.tsx';
 import ValuesTab from './ValuesTab.tsx';
 import TradeTab from './TradeTab.tsx';
 import VoteTab from './VoteTab.tsx';
+import { brownBellToken, rememberSignOut, takeLinkToken } from './handoff.ts';
 
 type Tab = 'values' | 'trade' | 'owners' | 'vote';
 interface Cached { meta: ValuesPayload; assets: Asset[] }
 
 export default function App() {
-  const [token, setToken] = useState<string | null>(() => load<string | null>('tc:token', null));
+  const [token, setToken] = useState<string | null>(() => {
+    const own = load<string | null>('tc:token', null);
+    const linked = takeLinkToken();
+    if (linked) {
+      if (own !== linked) {
+        // different sign-in than before: drop cached values from any other team
+        clear('tc:values'); clear('tc:team'); clear('tc:teamId');
+      }
+      save('tc:token', linked);
+      return linked;
+    }
+    if (own) return own;
+    const shared = brownBellToken();
+    if (shared) save('tc:token', shared);
+    return shared;
+  });
   const [tab, setTab] = useState<Tab>('values');
   const [data, setData] = useState<Cached | null>(() => load<Cached | null>('tc:values', null));
   const [teamName, setTeamName] = useState<string>(() => load('tc:team', ''));
@@ -23,7 +39,8 @@ export default function App() {
   const [league, setLeague] = useState<LeagueTeam[]>([]);
   const [err, setErr] = useState('');
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback((explicit = false) => {
+    if (explicit) rememberSignOut();
     clear('tc:token');
     clear('tc:values');
     clear('tc:team');
@@ -80,7 +97,10 @@ export default function App() {
           <div className="title">Trade Calc</div>
           <div className="meta">{teamName}</div>
         </div>
-        <button className="x" onClick={signOut}>Sign out</button>
+        <div>
+          <a className="x" href="https://hof-codez.github.io/brownbell/">Brown Bell</a>{' '}
+          <button className="x" onClick={() => signOut(true)}>Sign out</button>
+        </div>
       </header>
       {err && !data && (
         <div className="screen center">

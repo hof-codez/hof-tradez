@@ -66,6 +66,7 @@ h2 { margin: 0; font-size: 17px; }
 .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--muted); }
 .btn:disabled { opacity: 0.45; }
 .x { background: none; border: 0; color: var(--muted); padding: 6px 8px; cursor: pointer; font-size: 14px; }
+a.x { text-decoration: none; }
 .list { display: flex; flex-direction: column; gap: 2px; }
 .list.scroll { max-height: 52vh; overflow-y: auto; }
 .row { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); }
