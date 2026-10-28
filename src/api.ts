@@ -1,5 +1,5 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config.ts';
-import type { BallotAsset, LeagueTeam, TeamOption, ValuesPayload } from './types.ts';
+import type { BallotAsset, LeagueTeam, Milestone, SelfPreview, TeamOption, ValuesPayload } from './types.ts';
 
 export class ApiError extends Error {
   code: string;
@@ -43,12 +43,12 @@ const tc = <T,>(action: string, token: string | null, extra: Record<string, unkn
 
 export const api = {
   teams: () => tc<{ teams: TeamOption[] }>('teams', null),
-  me: (t: string) => tc<{ teamId: string; name: string; votesLeft: number }>('me', t),
+  me: (t: string) => tc<{ teamId: string; name: string; votesLeft: number; preview: SelfPreview }>('me', t),
   league: (t: string) => tc<{ teams: LeagueTeam[] }>('league', t),
   values: (t: string, since?: number) => tc<ValuesPayload>('values', t, { since }),
   ballot: (t: string) => tc<{ votesLeft: number; assets: BallotAsset[] }>('ballot', t),
   vote: (t: string, keep: string, trade: string, cut: string) =>
-    tc<{ ok: true; votesLeft: number }>('vote', t, { keep, trade, cut }),
+    tc<{ ok: true; votesLeft: number; dayVotes: number; weight: number; milestone: Milestone; preview: SelfPreview }>('vote', t, { keep, trade, cut }),
   // Reuses Brown Bell's existing claim function: same PINs, same device tokens.
   claim: (teamId: string, pin: string, deviceLabel: string) =>
     call<{ success: boolean; deviceToken: string; action: 'claimed' | 'unlocked' }>('claim-team', {
@@ -62,7 +62,7 @@ export function friendly(e: unknown): string {
   if (e instanceof ApiError) {
     switch (e.code) {
       case 'offline': return e.message;
-      case 'daily_limit': return 'You are out of votes for today. They reset at midnight Arizona time.';
+      case 'daily_limit': return 'You hit today’s vote limit. It resets at midnight Arizona time.';
       case 'own_asset': return 'That ballot included one of your players. Loading a new one.';
       case 'not_signed_in': return 'Your sign in expired. Sign in again.';
       default: return e.message && e.message !== 'server_error' ? e.message : 'Something went wrong. Try again.';

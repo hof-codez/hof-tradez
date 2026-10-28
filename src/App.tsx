@@ -95,7 +95,7 @@ export default function App() {
         <TradeTab assets={data.assets} starPremium={data.meta.starPremium} teams={league} insights={insights} myTeamId={teamId} />
       )}
       {data && tab === 'owners' && <OwnersTab teams={league} insights={insights} myTeamId={teamId} />}
-      {data && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} />}
+      {data && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} />}
       <nav>
         {(['values', 'trade', 'owners', 'vote'] as Tab[]).map((t) => (
           <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>

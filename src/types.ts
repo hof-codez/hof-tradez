@@ -18,6 +18,7 @@ export interface ValuesPayload {
   publishedAt: string;
   starPremium: number;
   maxVotesPerDay: number;
+  fullWeightVotes: number;
   votesLeft: number;
   unchanged?: boolean;
   assets?: Asset[];
@@ -43,3 +44,12 @@ export interface LeagueTeam {
   traits: Trait[];
   lean: Record<string, number>;
 }
+
+export interface SelfPreview {
+  totalVotes: number;
+  confidence: 'none' | 'early' | 'solid';
+  traits: Trait[];
+  lean: Record<string, number>;
+}
+
+export type Milestone = 'early' | 'solid' | 'weight' | null;
