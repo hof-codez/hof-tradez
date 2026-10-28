@@ -1,5 +1,5 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config.ts';
-import type { BallotAsset, LeagueTeam, Milestone, SelfPreview, TeamOption, ValuesPayload } from './types.ts';
+import type { BallotAsset, DeskItem, LeagueTeam, SelfPreview, TeamOption, ValuesPayload, VoteResult } from './types.ts';
 
 export class ApiError extends Error {
   code: string;
@@ -48,7 +48,9 @@ export const api = {
   values: (t: string, since?: number) => tc<ValuesPayload>('values', t, { since }),
   ballot: (t: string) => tc<{ votesLeft: number; assets: BallotAsset[] }>('ballot', t),
   vote: (t: string, keep: string, trade: string, cut: string) =>
-    tc<{ ok: true; votesLeft: number; dayVotes: number; weight: number; milestone: Milestone; preview: SelfPreview }>('vote', t, { keep, trade, cut }),
+    tc<VoteResult>('vote', t, { keep, trade, cut }),
+  desk: (t: string) => tc<DeskItem>('desk', t),
+  deskVote: (t: string, payload: Record<string, unknown>) => tc<VoteResult>('desk_vote', t, payload),
   // Reuses Brown Bell's existing claim function: same PINs, same device tokens.
   claim: (teamId: string, pin: string, deviceLabel: string) =>
     call<{ success: boolean; deviceToken: string; action: 'claimed' | 'unlocked' }>('claim-team', {
@@ -63,7 +65,9 @@ export function friendly(e: unknown): string {
     switch (e.code) {
       case 'offline': return e.message;
       case 'daily_limit': return 'You hit today’s vote limit. It resets at midnight Arizona time.';
-      case 'own_asset': return 'That ballot included one of your players. Loading a new one.';
+      case 'own_asset': return 'That one included one of your players. Loading a new one.';
+      case 'offer_expired': return 'That offer timed out. Loading a new one.';
+      case 'already_voted': return 'You already voted on that one. Loading a new one.';
       case 'not_signed_in': return 'Your sign in expired. Sign in again.';
       default: return e.message && e.message !== 'server_error' ? e.message : 'Something went wrong. Try again.';
     }

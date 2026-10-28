@@ -125,3 +125,4 @@ select.input { appearance: none; }
 .leantrack i.down { background: var(--bad); }
 nav button { font-size: 11px; }
 .note.milestone { background: #2e2414; color: var(--text); border: 1px solid var(--accent); cursor: pointer; }
+.votesleft { margin-left: auto; align-self: center; white-space: nowrap; }

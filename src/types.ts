@@ -53,3 +53,24 @@ export interface SelfPreview {
 }
 
 export type Milestone = 'early' | 'solid' | 'weight' | null;
+
+export type DeskItem =
+  | { kind: 'offer'; receive: BallotAsset[]; give: BallotAsset[]; exp: number; sig: string; votesLeft: number }
+  | { kind: 'real'; id: string; year: number; aGave: BallotAsset[]; bGave: BallotAsset[]; votesLeft: number };
+
+export interface RealSplit {
+  aWon: number;
+  even: number;
+  bWon: number;
+  total: number;
+}
+
+export interface VoteResult {
+  ok: true;
+  votesLeft: number;
+  dayVotes: number;
+  weight: number;
+  milestone: Milestone;
+  preview: SelfPreview;
+  split?: RealSplit | null;
+}

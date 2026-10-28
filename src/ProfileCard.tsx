@@ -6,6 +6,8 @@ const LEAN_ROWS: { key: string; label: string }[] = [
   { key: 'young', label: 'Young (24 and under)' },
   { key: 'vet', label: 'Veterans (29+)' },
   { key: 'pick', label: 'Draft picks' },
+  { key: 'consolidate', label: 'Many-for-one trades' },
+  { key: 'spread', label: 'One-for-many trades' },
   ...POSITIONS.map((p) => ({ key: p, label: p })),
 ];
 
