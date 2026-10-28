@@ -9,6 +9,7 @@ import Claim from './Claim.tsx';
 import ValuesTab from './ValuesTab.tsx';
 import TradeTab from './TradeTab.tsx';
 import VoteTab from './VoteTab.tsx';
+import type { FitData } from './lineup.ts';
 import { brownBellToken, rememberSignOut, takeLinkToken } from './handoff.ts';
 
 type Tab = 'values' | 'trade' | 'owners' | 'vote';
@@ -37,6 +38,7 @@ export default function App() {
   const [votesLeft, setVotesLeft] = useState(0);
   const [teamId, setTeamId] = useState<string>(() => load('tc:teamId', ''));
   const [league, setLeague] = useState<LeagueTeam[]>([]);
+  const [fit, setFit] = useState<FitData | null>(null);
   const [err, setErr] = useState('');
 
   const signOut = useCallback((explicit = false) => {
@@ -70,6 +72,7 @@ export default function App() {
       save('tc:team', me.name);
       save('tc:teamId', me.teamId);
       // owner profiles are a bonus: if this fails the rest of the app still works
+      api.fitData(t).then(setFit).catch(() => {});
       Promise.all([api.league(t), api.tradeFeed(t).catch(() => null)])
         .then(([r, feed]) => {
           const counts = new Map<string, number>();
@@ -120,7 +123,7 @@ export default function App() {
       {!data && !err && <p className="sub pad">Loading values…</p>}
       {data && tab === 'values' && <ValuesTab assets={data.assets} meta={data.meta} />}
       {data && tab === 'trade' && (
-        <TradeTab assets={data.assets} starPremium={data.meta.starPremium} teams={league} insights={insights} myTeamId={teamId} />
+        <TradeTab fit={fit} assets={data.assets} starPremium={data.meta.starPremium} teams={league} insights={insights} myTeamId={teamId} />
       )}
       {data && tab === 'owners' && <OwnersTab teams={league} insights={insights} myTeamId={teamId} />}
       {data && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} />}

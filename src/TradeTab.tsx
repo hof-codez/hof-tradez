@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { Asset, LeagueTeam } from './types.ts';
 import type { RosterInsight } from './insight.ts';
-import { AVAILABILITY_TEXT, availability, ideasFor, medianTrades, partnerNotes } from './insight.ts';
+import { AVAILABILITY_TEXT, availability, ideasFor, medianTrades, partnerNotes, rosterAssets } from './insight.ts';
+import { OUT_WEEKS, fitFor, fitHeadline } from './lineup.ts';
+import type { FitData } from './lineup.ts';
 import { balanceIdeas, consensusText, judge } from './trade.ts';
 import { AssetRow } from './ui.tsx';
 import ProfileCard from './ProfileCard.tsx';
@@ -14,12 +16,14 @@ export default function TradeTab({
   teams,
   insights,
   myTeamId,
+  fit,
 }: {
   assets: Asset[];
   starPremium: number;
   teams: LeagueTeam[];
   insights: Map<string, RosterInsight>;
   myTeamId: string;
+  fit: FitData | null;
 }) {
   const [a, setA] = useState<Asset[]>([]);
   const [b, setB] = useState<Asset[]>([]);
@@ -50,6 +54,15 @@ export default function TradeTab({
       .sort((x, y) => y.score * (0.6 + y.avail.score) - x.score * (0.6 + x.avail.score))
       .slice(0, 4);
   }, [me, partner, insights, byId, used, teams]);
+  // Lineup impact for each side, from this season's points per game, injuries and byes
+  const fitMine = useMemo(() => {
+    if (!me || !fit || (!a.length && !b.length)) return null;
+    return fitFor(rosterAssets(me, byId), a, b, fit, 'you');
+  }, [me, fit, a, b, byId]);
+  const fitTheirs = useMemo(() => {
+    if (!partner || !fit || (!a.length && !b.length)) return null;
+    return fitFor(rosterAssets(partner, byId), b, a, fit, 'them');
+  }, [partner, fit, a, b, byId]);
   const myNeeds = me ? insights.get(me.teamId)?.need ?? [] : [];
 
   const mine = useMemo(() => new Set(me?.roster ?? []), [me]);
@@ -128,6 +141,23 @@ export default function TradeTab({
           </div>
         );
       })}
+
+      {fitMine && fitMine.label !== 'unknown' && (
+        <div className="card">
+          <h2>Fit for the lineup</h2>
+          <div className="meta strong">{fitHeadline(fitMine, 'Your')}</div>
+          {fitMine.notes.map((n) => <div key={n} className="why">{n}</div>)}
+          {partner && fitTheirs && fitTheirs.label !== 'unknown' && (
+            <>
+              <div className="meta strong pad-top">{fitHeadline(fitTheirs, `${partner.name}'s`)}</div>
+              {fitTheirs.notes.map((n) => <div key={n} className="why">{n}</div>)}
+            </>
+          )}
+          <div className="meta small">
+            Built from this season's points per game, injuries and byes for the rest of the regular season. A player who is out is assumed to miss {OUT_WEEKS} weeks, since return dates are not available.
+          </div>
+        </div>
+      )}
 
       {partner && (offerIdeas.length > 0 || wantIdeas.length > 0) && (
         <div className="card">

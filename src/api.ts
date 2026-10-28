@@ -1,4 +1,5 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config.ts';
+import type { FitData } from './lineup.ts';
 import type { DeskItem, LeagueTeam, SelfPreview, TeamOption, ValuesPayload, VoteResult } from './types.ts';
 
 export class ApiError extends Error {
@@ -47,6 +48,7 @@ export const api = {
   league: (t: string) => tc<{ teams: LeagueTeam[] }>('league', t),
   values: (t: string, since?: number) => tc<ValuesPayload>('values', t, { since }),
   tradeFeed: (t: string) => tc<{ trades: { teamA: { id: string | null }; teamB: { id: string | null } }[] }>('trade_feed', t),
+  fitData: (t: string) => tc<FitData>('fit_data', t),
   desk: (t: string) => tc<DeskItem>('desk', t),
   deskVote: (t: string, payload: Record<string, unknown>) => tc<VoteResult>('desk_vote', t, payload),
   // Reuses Brown Bell's existing claim function: same PINs, same device tokens.
