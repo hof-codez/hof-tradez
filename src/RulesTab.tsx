@@ -15,6 +15,7 @@ export default function RulesTab({ maxPerDay, fullWeight, starPremium }: { maxPe
       <Section title="Voting">
         <div className="meta">You can cast {maxPerDay} votes a day. Your first {fullWeight} votes each day count in full. Later ones count for less, so a long session does not drown out everyone else.</div>
         <div className="meta">You rank three players (keep, trade, cut) or judge a trade (accept, even, decline). You cannot rank your own players or vote on trades you were part of. Nobody sees how you voted, only totals.</div>
+        <div className="meta">Votes on past trades in the History tab are separate. They do not use your daily votes, you get one per trade, and they always count in full. They still move the values.</div>
         <div className="meta">After enough votes you get a profile of your tendencies. Other owners see your traits, never your votes.</div>
       </Section>
       <Section title="Draft picks">

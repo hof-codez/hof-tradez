@@ -115,9 +115,9 @@ export default function HistoryTab({
           {t.mine === null && !t.canVote && t.teamA.id !== myTeamId && t.teamB.id !== myTeamId && (
             <div className="meta">You can't vote on this one. It involves a player or pick on your roster, or a player no longer tracked.</div>
           )}
-          {t.canVote && votesLeft > 0 && (
+          {t.canVote && (
             <>
-              <div className="meta">Weigh in (uses one of your daily votes)</div>
+              <div className="meta">Weigh in. These votes are separate from your daily votes and count in full.</div>
               <div className="choices">
                 <button className="btn" disabled={busy === t.id} onClick={() => vote(t, 'a')}>{t.teamA.name} got the better deal</button>
                 <button className="btn" disabled={busy === t.id} onClick={() => vote(t, 'even')}>Even</button>
