@@ -10,6 +10,7 @@ const label = (a: HistoryAsset) =>
 
 export default function HistoryTab({
   token,
+  myTeamId,
   trades,
   setTrades,
   votesLeft,
@@ -17,6 +18,7 @@ export default function HistoryTab({
   onVoted,
 }: {
   token: string;
+  myTeamId: string;
   trades: HistoryTrade[] | null;
   setTrades: (updater: (prev: HistoryTrade[] | null) => HistoryTrade[] | null) => void;
   votesLeft: number;
@@ -57,6 +59,7 @@ export default function HistoryTab({
       <div className="note">
         This is the league's current view of each trade, built from how owners have voted. It can change as more votes come in.
       </div>
+      <div className="meta">You can't vote on trades you were part of or ones that involve players on your roster.</div>
       <div className="chips">
         <button className={`pill${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}>All trades</button>
         <button className={`pill${filter === 'pending' ? ' on' : ''}`} onClick={() => setFilter('pending')}>Needs votes ({pending})</button>
@@ -85,6 +88,12 @@ export default function HistoryTab({
           </div>
 
           {t.mine !== null && <div className="meta">You voted: {outcomeWord(t.mine) === 'a' ? `${t.teamA.name} got the better deal` : outcomeWord(t.mine) === 'b' ? `${t.teamB.name} got the better deal` : 'Even'}</div>}
+          {t.mine === null && !t.canVote && (t.teamA.id === myTeamId || t.teamB.id === myTeamId) && (
+            <div className="meta">You were part of this trade, so you can't vote on it.</div>
+          )}
+          {t.mine === null && !t.canVote && t.teamA.id !== myTeamId && t.teamB.id !== myTeamId && (
+            <div className="meta">You can't vote on this one. It involves a player or pick on your roster, or a player no longer tracked.</div>
+          )}
           {t.canVote && votesLeft > 0 && (
             <>
               <div className="meta">Weigh in (uses one of your daily votes)</div>
