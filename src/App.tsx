@@ -147,15 +147,17 @@ export default function App() {
       )}
       {err && data && <div className="banner">{err}</div>}
       {!data && !err && <p className="sub pad">Loading values…</p>}
-      {data && !showRules && tab === 'values' && <ValuesTab assets={data.assets} meta={data.meta} />}
-      {data && !showRules && tab === 'trade' && (
+      <div hidden={showRules}>
+      {data && tab === 'values' && <ValuesTab assets={data.assets} meta={data.meta} />}
+      {data && tab === 'trade' && (
         <TradeTab fit={fit} assets={data.assets} starPremium={data.meta.starPremium} teams={leagueWithTrades} insights={insights} myTeamId={teamId} />
       )}
-      {data && !showRules && tab === 'owners' && <OwnersTab teams={leagueWithTrades} insights={insights} myTeamId={teamId} />}
-      {data && !showRules && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} onVoted={reloadValues} />}
-      {data && !showRules && tab === 'history' && (
+      {data && tab === 'owners' && <OwnersTab teams={leagueWithTrades} insights={insights} myTeamId={teamId} />}
+      {data && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} onVoted={reloadValues} />}
+      {data && tab === 'history' && (
         <HistoryTab token={token} myTeamId={teamId} trades={history} setTrades={setHistory} votesLeft={votesLeft} onVotesLeft={setVotesLeft} onVoted={reloadValues} />
       )}
+      </div>
       {data && showRules && <RulesTab maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} starPremium={data.meta.starPremium} />}
       <nav>
         {(['values', 'trade', 'history', 'owners', 'vote'] as Tab[]).map((t) => (
