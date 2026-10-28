@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Asset, LeagueTeam } from './types.ts';
 import type { RosterInsight } from './insight.ts';
 import { AVAILABILITY_TEXT, availability, ideasFor, medianTrades, partnerNotes } from './insight.ts';
-import { balanceIdeas, judge } from './trade.ts';
+import { balanceIdeas, consensusText, judge } from './trade.ts';
 import { AssetRow } from './ui.tsx';
 import ProfileCard from './ProfileCard.tsx';
 
@@ -80,10 +80,7 @@ export default function TradeTab({
     setScope(partner ? (side === 'A' ? 'mine' : 'theirs') : 'all');
   }
 
-  const verdictText =
-    v.label === 'empty' ? 'Add assets to both sides'
-    : v.label === 'fair' ? 'Fair trade'
-    : `Side ${v.winner} wins by ${Math.round(v.pct * 100)}%`;
+  const verdictText = consensusText(v, partner?.name);
 
   const scopes: Scope[] = partner ? ['mine', 'theirs', 'picks', 'all'] : ['all', 'picks'];
 

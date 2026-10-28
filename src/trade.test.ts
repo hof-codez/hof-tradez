@@ -33,3 +33,16 @@ test('balance ideas pick the closest value and skip used assets', () => {
 test('adjusted keeps 10000 at 10000', () => {
   assert.equal(Math.round(adjusted(10000, 0.5)), 10000);
 });
+
+import { consensusText } from './trade.ts';
+
+test('consensus wording names who it leans toward, never a percentage', () => {
+  const a = [{ id: 'a', kind: 'player', name: 'a', position: 'WR', team: null, age: 25, pickYear: null, pickRound: null, value: 9000 }] as any[];
+  const b = [{ id: 'b', kind: 'player', name: 'b', position: 'WR', team: null, age: 25, pickYear: null, pickRound: null, value: 2000 }] as any[];
+  const heavy = consensusText(judge(a, b, 0.3), 'Sam');
+  assert.ok(heavy.includes('heavily one-sided toward Sam'));
+  assert.ok(consensusText(judge(b, a, 0.3), 'Sam').includes('toward you'));
+  assert.ok(!/\d%/.test(heavy));
+  assert.ok(consensusText(judge(a, a, 0.3)).includes('fair'));
+  assert.equal(consensusText(judge([], b, 0.3)), 'Add assets to both sides');
+});
