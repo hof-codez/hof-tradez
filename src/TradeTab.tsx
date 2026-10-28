@@ -35,42 +35,54 @@ export default function TradeTab({
   const [showProfile, setShowProfile] = useState(false);
 
   const byId = useMemo(() => new Map(assets.map((x) => [x.id, x])), [assets]);
-  const me = teams.find((t) => t.teamId === myTeamId);
-  const partner = teams.find((t) => t.teamId === partnerId);
+  // Two ways to use the tab. "My trade": I pick who I am trading with and every read is about my team.
+  // "Other owners": I pick any two teams and every read is about those two, never about my team.
+  // me / partner below mean the left and right team of the trade being looked at.
+  const [mode, setMode] = useState<'mine' | 'other'>('mine');
+  const [leftId, setLeftId] = useState('');
+  const [rightId, setRightId] = useState('');
+  const isYou = mode === 'mine';
+  const myTeam = teams.find((t) => t.teamId === myTeamId);
+  const picked = teams.find((t) => t.teamId === partnerId);
+  const me = isYou ? (picked ? myTeam : undefined) : teams.find((t) => t.teamId === leftId);
+  const partner = isYou ? picked : teams.find((t) => t.teamId === rightId);
+  const pair = !!(me && partner);
+  const lPoss = isYou ? 'Your' : `${me?.name ?? 'Their'}'s`;
+  const lSubj = isYou ? 'you' : me?.name ?? 'they';
   const used = useMemo(() => new Set([...a, ...b].map((x) => x.id)), [a, b]);
   const v = judge(a, b, starPremium);
   const trailing = v.winner === 'A' ? 'B' : 'A';
   const evenIdeas = v.label === 'close' || v.label === 'lopsided' ? balanceIdeas(v.gap, assets, used, starPremium) : [];
 
   const offerIdeas = useMemo(
-    () => (me && partner ? ideasFor(me, partner, insights, byId, used) : []),
-    [me, partner, insights, byId, used],
+    () => (isYou && me && partner ? ideasFor(me, partner, insights, byId, used) : []),
+    [isYou, me, partner, insights, byId, used],
   );
   // What you need that they have, ranked by fit and by how likely they are to part with him
   const wantIdeas = useMemo(() => {
-    if (!me || !partner) return [];
+    if (!isYou || !me || !partner) return [];
     const median = medianTrades(teams);
     return ideasFor(partner, me, insights, byId, used, 10, true)
       .map((i) => ({ ...i, avail: availability(partner, i.asset, insights.get(partner.teamId), byId, median) }))
       .sort((x, y) => y.score * (0.6 + y.avail.score) - x.score * (0.6 + x.avail.score))
       .slice(0, 4);
-  }, [me, partner, insights, byId, used, teams]);
+  }, [isYou, me, partner, insights, byId, used, teams]);
   // Lineup impact for each side, from this season's points per game, injuries and byes
   const fitMine = useMemo(() => {
-    if (!me || !fit || (!a.length && !b.length)) return null;
-    return fitFor(rosterAssets(me, byId), a, b, fit, 'you');
-  }, [me, fit, a, b, byId]);
+    if (!me || !partner || !fit || (!a.length && !b.length)) return null;
+    return fitFor(rosterAssets(me, byId), a, b, fit, isYou ? 'you' : 'them');
+  }, [isYou, me, partner, fit, a, b, byId]);
   const fitTheirs = useMemo(() => {
-    if (!partner || !fit || (!a.length && !b.length)) return null;
+    if (!me || !partner || !fit || (!a.length && !b.length)) return null;
     return fitFor(rosterAssets(partner, byId), b, a, fit, 'them');
-  }, [partner, fit, a, b, byId]);
+  }, [me, partner, fit, a, b, byId]);
   // Dynasty view: how each side's value holds up over the next few seasons
   const [stancePick, setStancePick] = useState<Stance | null>(null);
-  const myStance: Stance = stancePick ?? stanceFromRecord(me?.record);
+  const myStance: Stance = (isYou ? stancePick : null) ?? stanceFromRecord(me?.record);
   const theirStance: Stance = stanceFromRecord(partner?.record);
-  const futureMine = useMemo(() => futureFor(a, b, starPremium, 'you', fit, myStance), [a, b, starPremium, fit, myStance]);
-  const futureTheirs = useMemo(() => (partner ? futureFor(b, a, starPremium, 'them', fit, theirStance) : null), [partner, a, b, starPremium, fit, theirStance]);
-  const myNeeds = me ? insights.get(me.teamId)?.need ?? [] : [];
+  const futureMine = useMemo(() => (pair ? futureFor(a, b, starPremium, isYou ? 'you' : 'them', fit, myStance) : null), [pair, isYou, a, b, starPremium, fit, myStance]);
+  const futureTheirs = useMemo(() => (pair ? futureFor(b, a, starPremium, 'them', fit, theirStance) : null), [pair, a, b, starPremium, fit, theirStance]);
+  const myNeeds = isYou && me ? insights.get(me.teamId)?.need ?? [] : [];
 
   const mine = useMemo(() => new Set(me?.roster ?? []), [me]);
   const theirs = useMemo(() => new Set(partner?.roster ?? []), [partner]);
@@ -85,12 +97,12 @@ export default function TradeTab({
         if (scope === 'picks') {
           if (x.kind !== 'pick') return false;
           // with a trade partner, only picks the two of you hold can change hands
-          return !partner || mine.has(x.id) || theirs.has(x.id);
+          return !pair || mine.has(x.id) || theirs.has(x.id);
         }
         return true;
       })
       .slice(0, scope === 'picks' ? 200 : 60);
-  }, [assets, a, b, picking, q, scope, mine, theirs, partner]);
+  }, [assets, a, b, picking, q, scope, mine, theirs, pair]);
 
   // who holds each pick right now
   const holder = useMemo(() => {
@@ -120,24 +132,52 @@ export default function TradeTab({
   function open(side: 'A' | 'B') {
     setPicking(side);
     setQ('');
-    setScope(partner ? (side === 'A' ? 'mine' : 'theirs') : 'all');
+    setScope(pair ? (side === 'A' ? 'mine' : 'theirs') : 'all');
   }
 
-  const verdictText = consensusText(v, partner?.name);
+  const verdictText = pair
+    ? consensusText(v, partner!.name, isYou ? 'you' : me!.name)
+    : consensusText(v, 'Side B', 'Side A');
 
-  const scopes: Scope[] = partner ? ['mine', 'theirs', 'picks', 'all'] : ['all', 'picks'];
+  const scopes: Scope[] = pair ? ['mine', 'theirs', 'picks', 'all'] : ['all', 'picks'];
 
   return (
     <div className="screen">
       <div className="card">
-        <label className="meta strong" htmlFor="partner">Trading with</label>
-        <select id="partner" className="input" value={partnerId} onChange={(e) => { setPartnerId(e.target.value); setShowProfile(false); }}>
-          <option value="">Nobody yet (free build)</option>
-          {teams.filter((t) => t.teamId !== myTeamId).map((t) => (
-            <option key={t.teamId} value={t.teamId}>{t.name}</option>
-          ))}
-        </select>
-        {partner && (
+        <div className="chips">
+          <button className={`pill${isYou ? ' on' : ''}`} onClick={() => { setMode('mine'); setA([]); setB([]); setShowProfile(false); }}>My trade</button>
+          <button className={`pill${!isYou ? ' on' : ''}`} onClick={() => { setMode('other'); setA([]); setB([]); setShowProfile(false); }}>Other owners</button>
+        </div>
+        {isYou ? (
+          <>
+            <label className="meta strong" htmlFor="partner">Trading with</label>
+            <select id="partner" className="input" value={partnerId} onChange={(e) => { setPartnerId(e.target.value); setShowProfile(false); }}>
+              <option value="">Nobody yet (values only)</option>
+              {teams.filter((t) => t.teamId !== myTeamId).map((t) => (
+                <option key={t.teamId} value={t.teamId}>{t.name}</option>
+              ))}
+            </select>
+          </>
+        ) : (
+          <>
+            <label className="meta strong" htmlFor="left">First owner</label>
+            <select id="left" className="input" value={leftId} onChange={(e) => { setLeftId(e.target.value); setA([]); }}>
+              <option value="">Pick an owner</option>
+              {teams.filter((t) => t.teamId !== rightId).map((t) => (
+                <option key={t.teamId} value={t.teamId}>{t.name}</option>
+              ))}
+            </select>
+            <label className="meta strong" htmlFor="right">Second owner</label>
+            <select id="right" className="input" value={rightId} onChange={(e) => { setRightId(e.target.value); setB([]); setShowProfile(false); }}>
+              <option value="">Pick an owner</option>
+              {teams.filter((t) => t.teamId !== leftId).map((t) => (
+                <option key={t.teamId} value={t.teamId}>{t.name}</option>
+              ))}
+            </select>
+          </>
+        )}
+        {!pair && <div className="meta">Pick {isYou ? 'who you are trading with' : 'two owners'} to see lineup and future fit for the teams involved. Until then you only get values.</div>}
+        {isYou && partner && (
           <>
             <div className="tags">
               {partnerNotes(partner, insights.get(partner.teamId)).map((n) => <span key={n} className="tag">{n}</span>)}
@@ -161,7 +201,7 @@ export default function TradeTab({
         return (
           <div className="card" key={side}>
             <div className="sidehead">
-              <h2>{side === 'A' ? 'You give' : partner ? `${partner.name} gives` : 'You get'} (Side {side})</h2>
+              <h2>{side === 'A' ? (pair ? `${isYou ? 'You' : me!.name} give${isYou ? '' : 's'}` : 'Side A gives') : pair ? `${partner!.name} gives` : 'Side B gives'} (Side {side})</h2>
               <span className="meta">{(side === 'A' ? v.a : v.b).toLocaleString()}</span>
             </div>
             {list.map((x) => (
@@ -175,7 +215,7 @@ export default function TradeTab({
       {fitMine && fitMine.label !== 'unknown' && (
         <div className="card">
           <h2>Fit for the lineup</h2>
-          <div className="meta strong">{fitHeadline(fitMine, 'Your')}</div>
+          <div className="meta strong">{fitHeadline(fitMine, lPoss)}</div>
           {fitMine.notes.map((n) => <div key={n} className="why">{n}</div>)}
           {partner && fitTheirs && fitTheirs.label !== 'unknown' && (
             <>
@@ -189,28 +229,31 @@ export default function TradeTab({
         </div>
       )}
 
-      {futureMine.label !== 'unknown' && (
+      {futureMine && futureMine.label !== 'unknown' && (
         <div className="card">
           <h2>Fit for the future</h2>
-          <div className="meta">
+          {!isYou && (
+            <div className="meta">{me!.name} looks like a {STANCE_LABEL[myStance].toLowerCase()} team{me!.record ? ` (rank ${me!.record.rank} of ${me!.record.size})` : ''}.</div>
+          )}
+          {isYou && <div className="meta">
             Your situation{me?.record && !stancePick ? ` (rank ${me.record.rank} of ${me.record.size})` : ''}:{' '}
             {(['win', 'balanced', 'build'] as Stance[]).map((st) => (
               <button key={st} type="button" className={`btn ghost small${myStance === st ? ' on' : ''}`} onClick={() => setStancePick(st === stanceFromRecord(me?.record) && stancePick === null ? null : st)}>
                 {STANCE_LABEL[st]}
               </button>
             ))}
-          </div>
-          <div className="meta strong">{futureHeadline(futureMine, 'Your')}</div>
+          </div>}
+          <div className="meta strong">{futureHeadline(futureMine, lPoss)}</div>
           {futureMine.chance !== null && futureMine.range && (
             <div className="meta">
-              About a {Math.round(futureMine.chance * 100)}% chance this leaves you ahead, counting the next three seasons the way a {STANCE_LABEL[myStance].toLowerCase()} team would. Two seasons out, your net change is likely between {Math.round(futureMine.range.lo).toLocaleString()} and {Math.round(futureMine.range.hi).toLocaleString()}.
+              About a {Math.round(futureMine.chance * 100)}% chance this leaves {lSubj} ahead, counting the next three seasons the way a {STANCE_LABEL[myStance].toLowerCase()} team would. Two seasons out, {isYou ? 'your' : `${me!.name}'s`} net change is likely between {Math.round(futureMine.range.lo).toLocaleString()} and {Math.round(futureMine.range.hi).toLocaleString()}.
             </div>
           )}
           {futureMine.notes.map((n) => <div key={n} className="why">{n}</div>)}
           <div className="meta">
             {futureMine.rows.map((r) => (
               <div key={r.years} className="line">
-                {r.years === 0 ? 'Today' : `In ${r.years} season${r.years > 1 ? 's' : ''}`}: you get {r.get.toLocaleString()}, you give {r.give.toLocaleString()}
+                {r.years === 0 ? 'Today' : `In ${r.years} season${r.years > 1 ? 's' : ''}`}: {lSubj} get{isYou ? '' : 's'} {r.get.toLocaleString()}, {lSubj} give{isYou ? '' : 's'} {r.give.toLocaleString()}
               </div>
             ))}
           </div>
@@ -229,7 +272,7 @@ export default function TradeTab({
         </div>
       )}
 
-      {partner && (offerIdeas.length > 0 || wantIdeas.length > 0) && (
+      {isYou && partner && (offerIdeas.length > 0 || wantIdeas.length > 0) && (
         <div className="card">
           <h2>Ideas for {partner.name}</h2>
           {offerIdeas.length > 0 && <div className="meta strong">From your roster, they may like</div>}
@@ -280,13 +323,13 @@ export default function TradeTab({
             <div className="chips">
               {scopes.map((s) => (
                 <button key={s} className={`pill${s === scope ? ' on' : ''}`} onClick={() => setScope(s)}>
-                  {s === 'mine' ? 'My roster' : s === 'theirs' ? 'Their roster' : s === 'picks' ? 'Picks' : 'All'}
+                  {s === 'mine' ? (isYou ? 'My roster' : me?.name ?? 'First') : s === 'theirs' ? (isYou ? 'Their roster' : partner?.name ?? 'Second') : s === 'picks' ? 'Picks' : 'All'}
                 </button>
               ))}
             </div>
             {scope === 'picks' && (
               <div className="meta">
-                {partner ? `Picks held by you or ${partner.name}. ` : ''}A pick's value follows the original team's record, so a worse record is worth more. It updates as standings change.
+                {pair ? `Picks held by ${isYou ? 'you' : me!.name} or ${partner!.name}. ` : ''}A pick's value follows the original team's record, so a worse record is worth more. It updates as standings change.
               </div>
             )}
             <input className="input" autoFocus placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />

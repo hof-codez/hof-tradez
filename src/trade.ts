@@ -52,10 +52,10 @@ export function balanceIdeas(
 
 // Framed as the league's view, not a winner and a percentage. Side A is what you give,
 // side B is what you get, so when A is worth more the other side comes out better.
-export function consensusText(v: Verdict, partnerName?: string): string {
+export function consensusText(v: Verdict, partnerName?: string, otherName = 'you'): string {
   if (v.label === 'empty') return 'Add assets to both sides';
   if (v.label === 'fair') return 'The league consensus sees this as a fair trade';
-  const favors = v.winner === 'A' ? partnerName ?? 'the other side' : 'you';
+  const favors = v.winner === 'A' ? partnerName ?? 'the other side' : otherName;
   return v.label === 'close'
     ? `The league consensus sees this as a close call that leans toward ${favors}`
     : `The league consensus sees this as heavily one-sided toward ${favors}`;
