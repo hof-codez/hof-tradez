@@ -46,6 +46,7 @@ export const api = {
   me: (t: string) => tc<{ teamId: string; name: string; votesLeft: number; preview: SelfPreview }>('me', t),
   league: (t: string) => tc<{ teams: LeagueTeam[] }>('league', t),
   values: (t: string, since?: number) => tc<ValuesPayload>('values', t, { since }),
+  tradeFeed: (t: string) => tc<{ trades: { teamA: { id: string | null }; teamB: { id: string | null } }[] }>('trade_feed', t),
   desk: (t: string) => tc<DeskItem>('desk', t),
   deskVote: (t: string, payload: Record<string, unknown>) => tc<VoteResult>('desk_vote', t, payload),
   // Reuses Brown Bell's existing claim function: same PINs, same device tokens.

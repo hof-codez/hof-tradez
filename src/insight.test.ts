@@ -53,3 +53,31 @@ test('asking-for ideas use second person wording', () => {
   assert.ok(ideas.every((i) => i.reasons.every((r) => !r.includes('their') && !r.startsWith('You are deep'))));
   assert.ok(ideas[0].reasons.some((r) => r.includes('your')));
 });
+
+import { availability, medianTrades } from './insight.ts';
+
+test('best asset is a long shot, bench depth is likely available', () => {
+  const stacked = [
+    mk('s-wr1', 'WR', 9000), mk('s-wr2', 'WR', 7000), mk('s-wr3', 'WR', 6000), mk('s-wr4', 'WR', 5000), mk('s-wr5', 'WR', 2500, 30),
+    mk('s-rb1', 'RB', 3000), mk('s-rb2', 'RB', 2800), mk('s-rb3', 'RB', 2600),
+  ];
+  const map = new Map(stacked.map((a) => [a.id, a]));
+  const S = team('S', stacked.map((a) => a.id));
+  const ins = computeInsights([S, A], new Map([...map, ...byId]));
+  const star = availability(S, map.get('s-wr1')!, ins.get('S'), map, 1);
+  const bench = availability(S, map.get('s-wr5')!, ins.get('S'), map, 1);
+  assert.equal(star.label, 'long-shot');
+  assert.ok(bench.score > star.score);
+  assert.ok(bench.why.some((w) => w.includes('Bench depth')));
+});
+
+test('trade activity nudges availability and median ignores missing counts', () => {
+  const p = mk('p1', 'WR', 3000);
+  const m = new Map([[p.id, p]]);
+  const base: LeagueTeam = { ...team('T', ['p1']), trades: 0 };
+  const busy: LeagueTeam = { ...base, trades: 6 };
+  const quiet = availability(base, p, undefined, m, 2);
+  const active = availability(busy, p, undefined, m, 2);
+  assert.ok(active.score > quiet.score);
+  assert.equal(medianTrades([{ ...base, trades: undefined }, busy]), 6);
+});

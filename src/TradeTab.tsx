@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Asset, LeagueTeam } from './types.ts';
 import type { RosterInsight } from './insight.ts';
-import { ideasFor, partnerNotes } from './insight.ts';
+import { AVAILABILITY_TEXT, availability, ideasFor, medianTrades, partnerNotes } from './insight.ts';
 import { balanceIdeas, judge } from './trade.ts';
 import { AssetRow } from './ui.tsx';
 import ProfileCard from './ProfileCard.tsx';
@@ -41,10 +41,16 @@ export default function TradeTab({
     () => (me && partner ? ideasFor(me, partner, insights, byId, used) : []),
     [me, partner, insights, byId, used],
   );
-  const wantIdeas = useMemo(
-    () => (me && partner ? ideasFor(partner, me, insights, byId, used, 3, true) : []),
-    [me, partner, insights, byId, used],
-  );
+  // What you need that they have, ranked by fit and by how likely they are to part with him
+  const wantIdeas = useMemo(() => {
+    if (!me || !partner) return [];
+    const median = medianTrades(teams);
+    return ideasFor(partner, me, insights, byId, used, 10, true)
+      .map((i) => ({ ...i, avail: availability(partner, i.asset, insights.get(partner.teamId), byId, median) }))
+      .sort((x, y) => y.score * (0.6 + y.avail.score) - x.score * (0.6 + x.avail.score))
+      .slice(0, 4);
+  }, [me, partner, insights, byId, used, teams]);
+  const myNeeds = me ? insights.get(me.teamId)?.need ?? [] : [];
 
   const mine = useMemo(() => new Set(me?.roster ?? []), [me]);
   const theirs = useMemo(() => new Set(partner?.roster ?? []), [partner]);
@@ -134,12 +140,22 @@ export default function TradeTab({
             <AssetRow key={i.asset.id} a={i.asset} onClick={() => add(i.asset, 'A')}
               note={i.reasons.join(' · ')} right={<span className="meta">{i.asset.value.toLocaleString()}</span>} />
           ))}
-          {wantIdeas.length > 0 && <div className="meta strong">From their roster, you may want</div>}
+          {wantIdeas.length > 0 && (
+            <div className="meta strong">
+              From their roster, you may want{myNeeds.length ? ` (you are thin at ${myNeeds.join(', ')})` : ''}
+            </div>
+          )}
           {wantIdeas.map((i) => (
             <AssetRow key={i.asset.id} a={i.asset} onClick={() => add(i.asset, 'B')}
-              note={i.reasons.join(' · ')} right={<span className="meta">{i.asset.value.toLocaleString()}</span>} />
+              note={[...i.reasons, ...i.avail.why.slice(0, 2)].join(' · ')}
+              right={
+                <div className="avail">
+                  <span className="meta">{i.asset.value.toLocaleString()}</span>
+                  <span className={`tag${i.avail.label === 'likely' ? ' accent' : ''}`}>{AVAILABILITY_TEXT[i.avail.label]}</span>
+                </div>
+              } />
           ))}
-          <div className="meta small">Tap one to add it. Suggestions come from rosters and voting habits, so treat them as a nudge.</div>
+          <div className="meta small">Tap one to add it. Availability is an estimate from roster role, depth, age fit and trade activity. Sleeper does not share rejected offers, so treat it as a nudge.</div>
         </div>
       )}
 

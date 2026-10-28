@@ -68,6 +68,7 @@ export function computeInsights(teams: LeagueTeam[], byId: Map<string, Asset>): 
 export interface Idea {
   asset: Asset;
   reasons: string[];
+  score: number;
 }
 
 // Players from `from` that `to` might want, best fit first.
@@ -89,7 +90,7 @@ export function ideasFor(
   const their = toIsMe ? 'your' : 'their';
   const fromDeep = toIsMe ? `${from.name} is deep at` : 'You are deep at';
 
-  const ideas: (Idea & { score: number })[] = [];
+  const ideas: Idea[] = [];
   for (const a of rosterAssets(from, byId)) {
     if (exclude.has(a.id) || !a.position || a.value < 800) continue;
     const pos = a.position as Pos;
@@ -105,7 +106,7 @@ export function ideasFor(
 
     if (reasons.length) ideas.push({ asset: a, reasons, score });
   }
-  return ideas.sort((x, y) => y.score - x.score).slice(0, count).map(({ asset, reasons }) => ({ asset, reasons }));
+  return ideas.sort((x, y) => y.score - x.score).slice(0, count);
 }
 
 // Plain-language notes for the partner panel.
@@ -118,4 +119,73 @@ export function partnerNotes(partner: LeagueTeam, ins: RosterInsight | undefined
   if (partner.traits.some((t) => t.key === 'pick-lover')) notes.push('Adding a pick may sweeten an offer');
   if (partner.traits.some((t) => t.key === 'pick-skeptic')) notes.push('Picks may not move the needle');
   return notes;
+}
+
+// ---- availability: how likely is it that this owner would put this player in a trade ----
+// Sleeper does not expose rejected trade offers, so this is an estimate from what we can
+// see: where the player sits on the owner's roster, depth at his position, whether his age
+// fits the owner's direction, and how active the owner is in trades.
+export type Availability = 'likely' | 'possible' | 'long-shot';
+
+export interface AvailabilityRead {
+  score: number; // 0 to 1
+  label: Availability;
+  why: string[];
+}
+
+export const AVAILABILITY_TEXT: Record<Availability, string> = {
+  likely: 'Likely available',
+  possible: 'Possibly available',
+  'long-shot': 'Long shot',
+};
+
+export function medianTrades(teams: LeagueTeam[]): number {
+  const counts = teams.map((t) => t.trades).filter((n): n is number => typeof n === 'number').sort((x, y) => x - y);
+  if (!counts.length) return 0;
+  return counts[Math.floor(counts.length / 2)];
+}
+
+export function availability(
+  owner: LeagueTeam,
+  player: Asset,
+  insight: RosterInsight | undefined,
+  byId: Map<string, Asset>,
+  medianTradeCount: number,
+): AvailabilityRead {
+  const why: string[] = [];
+  let score = 0.5;
+  const roster = rosterAssets(owner, byId).filter((a) => a.kind === 'player');
+  const overall = [...roster].sort((x, y) => y.value - x.value).findIndex((a) => a.id === player.id) + 1;
+  const pos = player.position as Pos | null;
+
+  if (overall === 1) { score -= 0.3; why.push('Their best asset'); }
+  else if (overall > 0 && overall <= 3) { score -= 0.2; why.push('A top-3 piece for them'); }
+
+  if (pos && insight) {
+    const samePos = roster.filter((a) => a.position === pos).sort((x, y) => y.value - x.value);
+    const slot = samePos.findIndex((a) => a.id === player.id) + 1;
+    const starters = STARTERS[pos];
+    if (slot > starters) { score += 0.25; why.push(`Bench depth behind their ${pos} starters`); }
+    else if (slot === starters && slot > 1) { score += 0.05; }
+    else if (insight.need.includes(pos)) { score -= 0.15; why.push(`They are thin at ${pos}`); }
+    if (insight.surplus.includes(pos)) { score += 0.1; why.push(`They are deep at ${pos}`); }
+  }
+
+  const traits = new Set(owner.traits.map((t) => t.key));
+  const young = traits.has('youth') || insight?.ageLabel === 'Young core';
+  const vets = traits.has('vets') || insight?.ageLabel === 'Veteran roster';
+  if (player.age) {
+    if (young && player.age >= 28) { score += 0.12; why.push('Older than the core they are building'); }
+    if (vets && player.age <= 23) { score += 0.12; why.push('Too young for their win-now lean'); }
+    if (young && player.age <= 23) score -= 0.1;
+  }
+
+  if (typeof owner.trades === 'number') {
+    if (medianTradeCount >= 1 && owner.trades >= medianTradeCount * 1.5) { score += 0.1; why.push('Trades often'); }
+    else if (owner.trades === 0 && medianTradeCount >= 2) { score -= 0.08; why.push('Rarely trades'); }
+  }
+
+  score = Math.max(0.05, Math.min(0.95, score));
+  const label: Availability = score >= 0.62 ? 'likely' : score >= 0.42 ? 'possible' : 'long-shot';
+  return { score, label, why };
 }

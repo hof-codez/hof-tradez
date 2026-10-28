@@ -70,7 +70,15 @@ export default function App() {
       save('tc:team', me.name);
       save('tc:teamId', me.teamId);
       // owner profiles are a bonus: if this fails the rest of the app still works
-      api.league(t).then((r) => setLeague(r.teams)).catch(() => {});
+      Promise.all([api.league(t), api.tradeFeed(t).catch(() => null)])
+        .then(([r, feed]) => {
+          const counts = new Map<string, number>();
+          for (const tr of feed?.trades ?? []) {
+            for (const id of [tr.teamA.id, tr.teamB.id]) if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+          }
+          setLeague(r.teams.map((x) => ({ ...x, trades: feed ? counts.get(x.teamId) ?? 0 : undefined })));
+        })
+        .catch(() => {});
     } catch (e) {
       if (e instanceof ApiError && e.code === 'not_signed_in') return signOut();
       setErr(friendly(e));

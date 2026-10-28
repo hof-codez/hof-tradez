@@ -43,6 +43,7 @@ export interface LeagueTeam {
   confidence: 'none' | 'early' | 'solid';
   traits: Trait[];
   lean: Record<string, number>;
+  trades?: number; // recent league trades this team was part of (from the trade feed)
 }
 
 export interface SelfPreview {
