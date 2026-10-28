@@ -65,8 +65,8 @@ export default function TradeTab({
     return fitFor(rosterAssets(partner, byId), b, a, fit, 'them');
   }, [partner, fit, a, b, byId]);
   // Dynasty view: how each side's value holds up over the next few seasons
-  const futureMine = useMemo(() => futureFor(a, b, starPremium, 'you'), [a, b, starPremium]);
-  const futureTheirs = useMemo(() => (partner ? futureFor(b, a, starPremium, 'them') : null), [partner, a, b, starPremium]);
+  const futureMine = useMemo(() => futureFor(a, b, starPremium, 'you', fit), [a, b, starPremium, fit]);
+  const futureTheirs = useMemo(() => (partner ? futureFor(b, a, starPremium, 'them', fit) : null), [partner, a, b, starPremium, fit]);
   const myNeeds = me ? insights.get(me.teamId)?.need ?? [] : [];
 
   const mine = useMemo(() => new Set(me?.roster ?? []), [me]);
@@ -181,7 +181,7 @@ export default function TradeTab({
             </>
           )}
           <div className="meta small">
-            Built from this season's points per game, injuries and byes for the rest of the regular season. A player who is out is assumed to miss {OUT_WEEKS} weeks, since return dates are not available.
+            Built from a blend of this season's points per game and what each player's targets and carries support, plus injuries and byes for the rest of the regular season. A player who is out is assumed to miss {OUT_WEEKS} weeks, since return dates are not available.
           </div>
         </div>
       )}
@@ -205,7 +205,7 @@ export default function TradeTab({
             </>
           )}
           <div className="meta small">
-            An age and position estimate. Each player's value is moved along a typical dynasty curve (running backs fade fastest, young receivers and tight ends tend to grow). Picks hold their value. It does not know about injuries or role changes, so treat it as a lean, not a forecast.
+            An estimate from age, position and usage. Each player's value is moved along a typical dynasty curve (running backs fade fastest, young receivers and tight ends tend to grow). Players scoring well above what their targets and carries support are marked down, since that gap has tended to shrink the next season. Picks hold their value. It does not know about injuries or role changes, so treat it as a lean, not a forecast.
           </div>
         </div>
       )}

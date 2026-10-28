@@ -28,3 +28,16 @@ test('the reverse costs the future', () => {
 test('empty trade is unknown', () => {
   assert.strictEqual(futureFor([], [], 0.3).label, 'unknown');
 });
+
+test('a player scoring well above his usage is marked down, one below is marked up', () => {
+  const fit = { slots: [], lastWeek: 14, currentWeek: 8, players: {
+    hot: { ppg: 16, games: 8, inj: null, bye: null, gap: 4, ug: 8 },
+    cold: { ppg: 10, games: 8, inj: null, bye: null, gap: -4, ug: 8 },
+  } };
+  const hot = P('hot', 'WR', 25, 5000), cold = P('cold', 'WR', 25, 5000);
+  assert.ok(projectValue(hot, 1, fit.players.hot) < 5000);
+  assert.ok(projectValue(cold, 1, fit.players.cold) > 5000);
+  assert.strictEqual(projectValue(hot, 0, fit.players.hot), 5000);
+  const r = futureFor([hot], [cold], 0.3, 'you', fit as any);
+  assert.ok(r.notes.some((n) => n.includes('bounce back')));
+});

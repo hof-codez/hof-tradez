@@ -10,6 +10,9 @@ export interface PlayerStatus {
   games: number;
   inj: string | null;
   bye: number | null;
+  proj?: number | null; // rest-of-season expectation: half points so far, half what his usage supports
+  gap?: number | null; // points per game scored above (+) or below (-) what his usage supports
+  ug?: number | null; // games behind the usage numbers
 }
 
 export interface FitData {
@@ -41,7 +44,7 @@ export interface Starter { slot: string; id: string | null; ppg: number }
 export function bestLineup(players: Asset[], fit: FitData, week: number): Starter[] {
   const pool = players
     .filter((p) => p.kind === 'player' && p.position && isAvailable(fit.players[p.id], week, fit.currentWeek))
-    .map((p) => ({ id: p.id, pos: p.position as string, ppg: fit.players[p.id]?.ppg ?? 0 }))
+    .map((p) => ({ id: p.id, pos: p.position as string, ppg: fit.players[p.id]?.proj ?? fit.players[p.id]?.ppg ?? 0 }))
     .sort((a, b) => b.ppg - a.ppg);
   const used = new Set<string>();
   // fill the most restrictive slots first so flex spots take what is left
