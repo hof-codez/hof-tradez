@@ -18,15 +18,9 @@ export default function ValuesTab({ assets, meta }: { assets: Asset[]; meta: Val
     });
   }, [ranked, filter, q]);
 
-  const ends = new Date(meta.windowEndsAt);
-  const days = Math.max(0, Math.ceil((ends.getTime() - Date.now()) / 86_400_000));
-
   return (
     <div className="screen">
-      <div className="note">
-        Values update when the voting window closes, {days === 0 ? 'later today' : `in ${days} day${days === 1 ? '' : 's'}`} (
-        {ends.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}).
-      </div>
+      <div className="note">Values move live as owners vote. Updated {new Date(meta.publishedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}.</div>
       <input className="input" placeholder="Search players" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="chips">
         {FILTERS.map((f) => (

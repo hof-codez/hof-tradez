@@ -29,12 +29,14 @@ export default function VoteTab({
   onVotesLeft,
   maxPerDay,
   fullWeight,
+  onVoted,
 }: {
   token: string;
   votesLeft: number;
   onVotesLeft: (n: number) => void;
   maxPerDay: number;
   fullWeight: number;
+  onVoted: () => void;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [done, setDone] = useState(0);
@@ -52,8 +54,9 @@ export default function VoteTab({
       setPreview(r.preview);
       setDone((n) => n + 1);
       setBanner(milestoneText(r.milestone, r.preview, maxPerDay, fullWeight));
+      onVoted();
     },
-    [onVotesLeft, maxPerDay, fullWeight],
+    [onVotesLeft, maxPerDay, fullWeight, onVoted],
   );
 
   const readPanel = preview && (
@@ -89,7 +92,7 @@ export default function VoteTab({
         {banner && <div className="note milestone">{banner}</div>}
         <div className="card">
           <h2>{done > 0 ? 'Thanks, that is all your votes for today' : 'No votes left today'}</h2>
-          <p className="sub">The limit is {maxPerDay} a day and resets at midnight Arizona time. New values go live when the voting window closes.</p>
+          <p className="sub">The limit is {maxPerDay} a day and resets at midnight Arizona time. Values update live as owners vote.</p>
         </div>
         {readPanel}
       </div>

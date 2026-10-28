@@ -9,9 +9,18 @@ import { clear, load, save } from './store.ts';
 const BB_KEY = 'brownbell-device-claim';
 const OPT_OUT = 'tc:noshare';
 
+let target: string | null = null;
+// where a link from Brown Bell asked to land, e.g. 'history'
+export const linkTarget = () => target;
+
 export function takeLinkToken(): string | null {
   try {
+    const g = /[#&]go=([^&]+)/.exec(window.location.hash);
+    if (g) target = decodeURIComponent(g[1]);
     const m = /[#&]t=([^&]+)/.exec(window.location.hash);
+    if (m || g) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
     if (m) {
       const token = decodeURIComponent(m[1]);
       // strip it from the address bar and history right away

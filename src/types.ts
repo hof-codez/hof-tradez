@@ -75,3 +75,21 @@ export interface VoteResult {
   preview: SelfPreview;
   split?: RealSplit | null;
 }
+
+export interface HistoryAsset {
+  id: string;
+  name: string;
+  position: string | null;
+  pickYear: number | null;
+  pickRound: number | null;
+}
+
+export interface HistoryTrade {
+  id: string;
+  happenedAt: string;
+  teamA: { id: string | null; name: string; gave: HistoryAsset[] };
+  teamB: { id: string | null; name: string; gave: HistoryAsset[] };
+  split: { aWon: number; even: number; bWon: number; total: number };
+  mine: number | null;
+  canVote: boolean;
+}
