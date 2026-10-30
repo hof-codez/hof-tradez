@@ -349,8 +349,8 @@ export default function TradeTab({
                 {pair ? `Picks held by ${isYou ? 'you' : me!.name} or ${partner!.name}. ` : ''}A pick's value follows the original team's record, so a worse record is worth more. It updates as standings change.
               </div>
             )}
-            <input className="input" autoFocus placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
-            <div className="list scroll">
+            <input className="input" type="search" enterKeyHint="done" placeholder="Search by name (optional)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
+            <div className="list scroll" onTouchStart={() => { const el = document.activeElement as HTMLElement | null; if (el && el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'search') el.blur(); }}>
               {shown.map((x, i) => {
                 const who = holder.get(x.id);
                 const head = scope === 'picks' && x.kind === 'pick' && who && who !== holder.get(shown[i - 1]?.id ?? '');
