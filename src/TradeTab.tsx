@@ -135,9 +135,15 @@ export default function TradeTab({
     setScope(pair ? (side === 'A' ? 'mine' : 'theirs') : 'all');
   }
 
+  // Who gives and who receives each side. Side A is the first team's, side B the second's.
+  const nameA = pair ? (isYou ? 'You' : me!.name) : 'Team A';
+  const nameB = pair ? partner!.name : 'Team B';
+  const giver = (side: 'A' | 'B') => (side === 'A' ? nameA : nameB);
+  const taker = (side: 'A' | 'B') => (side === 'A' ? nameB : nameA);
+
   const verdictText = pair
     ? consensusText(v, partner!.name, isYou ? 'you' : me!.name)
-    : consensusText(v, 'Side B', 'Side A');
+    : consensusText(v, 'Team B', 'Team A');
 
   const scopes: Scope[] = pair ? ['mine', 'theirs', 'picks', 'all'] : ['all', 'picks'];
 
@@ -201,9 +207,10 @@ export default function TradeTab({
         return (
           <div className="card" key={side}>
             <div className="sidehead">
-              <h2>{side === 'A' ? (pair ? `${isYou ? 'You' : me!.name} give${isYou ? '' : 's'}` : 'Side A gives') : pair ? `${partner!.name} gives` : 'Side B gives'} (Side {side})</h2>
+              <h2>{giver(side)} {side === 'A' && isYou && pair ? 'give' : 'gives'}</h2>
               <span className="meta">{(side === 'A' ? v.a : v.b).toLocaleString()}</span>
             </div>
+            <div className="meta">{taker(side)} {side === 'B' && isYou && pair ? 'receive' : 'receives'}</div>
             {list.map((x) => (
               <AssetRow key={x.id} a={x} right={<button className="x" onClick={() => remove(x.id, side)} aria-label={`Remove ${x.name}`}>✕</button>} />
             ))}
@@ -302,7 +309,7 @@ export default function TradeTab({
       {evenIdeas.length > 0 && (
         <div className="card">
           <h2>To even it up</h2>
-          <p className="sub">Side {trailing} could add one of these:</p>
+          <p className="sub">{giver(trailing)} could add one of these:</p>
           {evenIdeas.map((x) => (
             <AssetRow key={x.id} a={x} onClick={() => add(x, trailing)} right={<span className="meta">{x.value.toLocaleString()}</span>} />
           ))}
@@ -317,7 +324,7 @@ export default function TradeTab({
         <div className="sheet" onClick={() => setPicking(null)}>
           <div className="sheetbody" onClick={(e) => e.stopPropagation()}>
             <div className="sidehead">
-              <h2>Add to Side {picking}</h2>
+              <h2>Add to what {giver(picking)} {picking === 'A' && isYou && pair ? 'give' : 'gives'}</h2>
               <button className="x" onClick={() => setPicking(null)}>Done</button>
             </div>
             <div className="chips">
