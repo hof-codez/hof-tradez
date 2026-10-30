@@ -55,6 +55,23 @@ export default function App() {
     setData(null);
   }, []);
 
+  const [leagueState, setLeagueState] = useState<'loading' | 'ok' | 'failed'>('loading');
+  const loadLeague = useCallback((t: string) => {
+    const attempt = (left: number): void => {
+      setLeagueState('loading');
+      api.league(t)
+        .then((r) => {
+          setLeague((prev) => r.teams.map((x) => ({ ...x, trades: prev.find((q) => q.teamId === x.teamId)?.trades })));
+          setLeagueState(r.teams.length ? 'ok' : 'failed');
+        })
+        .catch(() => {
+          if (left > 0) setTimeout(() => attempt(left - 1), 2000);
+          else setLeagueState('failed');
+        });
+    };
+    attempt(2);
+  }, []);
+
   const refresh = useCallback(async (t: string) => {
     setErr('');
     try {
@@ -78,12 +95,12 @@ export default function App() {
       // owner profiles are a bonus: if this fails the rest of the app still works
       api.fitData(t).then(setFit).catch(() => {});
       api.history(t).then((r) => setHistory(r.trades)).catch(() => {});
-      api.league(t).then((r) => setLeague((prev) => r.teams.map((x) => ({ ...x, trades: prev.find((q) => q.teamId === x.teamId)?.trades })))).catch(() => {});
+      loadLeague(t);
     } catch (e) {
       if (e instanceof ApiError && e.code === 'not_signed_in') return signOut();
       setErr(friendly(e));
     }
-  }, [signOut]);
+  }, [signOut, loadLeague]);
 
   useEffect(() => {
     if (token) refresh(token);
@@ -150,7 +167,7 @@ export default function App() {
       <div style={{ display: showRules ? 'none' : 'contents' }}>
       {data && tab === 'values' && <ValuesTab assets={data.assets} meta={data.meta} />}
       {data && tab === 'trade' && (
-        <TradeTab fit={fit} assets={data.assets} starPremium={data.meta.starPremium} teams={leagueWithTrades} insights={insights} myTeamId={teamId} />
+        <TradeTab fit={fit} assets={data.assets} starPremium={data.meta.starPremium} teams={leagueWithTrades} insights={insights} myTeamId={teamId} ownersState={leagueState} onRetryOwners={() => token && loadLeague(token)} />
       )}
       {data && tab === 'owners' && <OwnersTab teams={leagueWithTrades} insights={insights} myTeamId={teamId} />}
       {data && tab === 'vote' && <VoteTab token={token} votesLeft={votesLeft} onVotesLeft={setVotesLeft} maxPerDay={data.meta.maxVotesPerDay} fullWeight={data.meta.fullWeightVotes ?? 5} onVoted={reloadValues} />}

@@ -18,6 +18,8 @@ export default function TradeTab({
   insights,
   myTeamId,
   fit,
+  ownersState = 'ok',
+  onRetryOwners,
 }: {
   assets: Asset[];
   starPremium: number;
@@ -25,6 +27,8 @@ export default function TradeTab({
   insights: Map<string, RosterInsight>;
   myTeamId: string;
   fit: FitData | null;
+  ownersState?: 'loading' | 'ok' | 'failed';
+  onRetryOwners?: () => void;
 }) {
   const [a, setA] = useState<Asset[]>([]);
   const [b, setB] = useState<Asset[]>([]);
@@ -181,6 +185,12 @@ export default function TradeTab({
               ))}
             </select>
           </>
+        )}
+        {teams.length === 0 && (
+          <div className="note">
+            {ownersState === 'loading' ? 'Loading owners…' : 'Owners did not load.'}{' '}
+            {ownersState === 'failed' && onRetryOwners && <button className="btn ghost small" onClick={onRetryOwners}>Try again</button>}
+          </div>
         )}
         {!pair && <div className="meta">Pick {isYou ? 'who you are trading with' : 'two owners'} to see lineup and future fit for the teams involved. Until then you only get values.</div>}
         {isYou && partner && (
