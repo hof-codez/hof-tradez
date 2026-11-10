@@ -144,3 +144,15 @@ details summary{cursor:pointer}
 .pickrow input{width:22px;height:22px;flex:none;accent-color:var(--accent,#d9962f)}
 .pickrow .grow{flex:1;min-width:0}
 .btn.ghost.on { background: var(--accent, #4a90e2); color: #fff; border-color: transparent; }
+
+/* vote feedback */
+.deskitem { display: flex; flex-direction: column; gap: 12px; width: 100%; animation: deskin .25s ease-out; }
+.deskitem.dim .card, .deskitem.dim .note { opacity: .5; transition: opacity .15s; }
+.status { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--accent); }
+.spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .7s linear infinite; }
+.segbtn.pop { animation: pop .25s ease-out; transform: scale(1.04); }
+.segbtn:disabled:not(.on) { opacity: .5; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.12); } 100% { transform: scale(1.04); } }
+@keyframes deskin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .deskitem, .segbtn.pop, .spin { animation: none; } }

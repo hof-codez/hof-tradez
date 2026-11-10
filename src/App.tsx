@@ -61,8 +61,8 @@ export default function App() {
       setLeagueState('loading');
       api.league(t)
         .then((r) => {
-          setLeague((prev) => r.teams.map((x) => ({ ...x, trades: prev.find((q) => q.teamId === x.teamId)?.trades })));
-          setLeagueState(r.teams.length ? 'ok' : 'failed');
+          setLeague((prev) => (r.teams ?? []).map((x) => ({ ...x, trades: prev.find((q) => q.teamId === x.teamId)?.trades })));
+          setLeagueState((r.teams ?? []).length ? 'ok' : 'failed');
         })
         .catch(() => {
           if (left > 0) setTimeout(() => attempt(left - 1), 2000);

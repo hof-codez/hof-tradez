@@ -26,6 +26,8 @@ export default function DeskMode({
   const [item, setItem] = useState<DeskItem | null>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [phase, setPhase] = useState<'saving' | 'loading' | 'skip'>('saving');
   const [after, setAfter] = useState<{ split: RealSplit | null } | null>(null); // result view for a real trade
 
   const next = useCallback(async () => {
@@ -52,6 +54,8 @@ export default function DeskMode({
   async function answer(outcome: string) {
     if (!item) return;
     setBusy(true);
+    setPicked(outcome);
+    setPhase('saving');
     setErr('');
     try {
       const payload =
@@ -60,6 +64,7 @@ export default function DeskMode({
           : { kind: 'real', id: item.id, outcome };
       const r = await api.deskVote(token, payload);
       onResult(r);
+      setPhase('loading');
       if (item.kind === 'real' && r.votesLeft > 0) {
         setAfter({ split: r.split && r.split.total >= MIN_SPLIT ? r.split : null });
       } else if (r.votesLeft > 0) {
@@ -73,13 +78,28 @@ export default function DeskMode({
       if (e instanceof ApiError && e.code === 'daily_limit') { onVotesLeft(0); setItem(null); }
     } finally {
       setBusy(false);
+      setPicked(null);
     }
+  }
+
+  async function skip() {
+    setBusy(true);
+    setPhase('skip');
+    await next();
+    setBusy(false);
   }
 
   if (!item && !err) return <p className="sub pad">Loading…</p>;
 
+  const itemKey = item ? (item.kind === 'offer' ? item.sig : item.id) : 'none';
   return (
-    <>
+    <div key={itemKey} className={`deskitem${busy ? ' dim' : ''}`}>
+      {busy && (
+        <div className="status" role="status">
+          <span className="spin" />
+          {phase === 'saving' ? 'Counting your vote…' : phase === 'loading' ? 'Vote counted. Finding the next one…' : 'Finding the next one…'}
+        </div>
+      )}
       {item?.kind === 'offer' && (
         <>
           <div className="note">
@@ -94,11 +114,11 @@ export default function DeskMode({
             {item.give.map((a) => <AssetRow key={a.id} a={a} />)}
           </div>
           <div className="seg">
-            <button className="segbtn keep" disabled={busy} onClick={() => answer('accept')}>Accept</button>
-            <button className="segbtn trade" disabled={busy} onClick={() => answer('even')}>Toss-up</button>
-            <button className="segbtn cut" disabled={busy} onClick={() => answer('decline')}>Decline</button>
+            <button className={`segbtn keep${picked === 'accept' ? ' on pop' : ''}`} disabled={busy} onClick={() => answer('accept')}>Accept</button>
+            <button className={`segbtn trade${picked === 'even' ? ' on pop' : ''}`} disabled={busy} onClick={() => answer('even')}>Toss-up</button>
+            <button className={`segbtn cut${picked === 'decline' ? ' on pop' : ''}`} disabled={busy} onClick={() => answer('decline')}>Decline</button>
           </div>
-          <button className="btn ghost" disabled={busy} onClick={next}>Skip this one</button>
+          <button className="btn ghost" disabled={busy} onClick={skip}>Skip this one</button>
         </>
       )}
 
@@ -120,11 +140,11 @@ export default function DeskMode({
           {!after ? (
             <>
               <div className="seg">
-                <button className="segbtn keep" disabled={busy} onClick={() => answer('a')}>A ahead</button>
-                <button className="segbtn trade" disabled={busy} onClick={() => answer('even')}>Even</button>
-                <button className="segbtn cut" disabled={busy} onClick={() => answer('b')}>B ahead</button>
+                <button className={`segbtn keep${picked === 'a' ? ' on pop' : ''}`} disabled={busy} onClick={() => answer('a')}>A ahead</button>
+                <button className={`segbtn trade${picked === 'even' ? ' on pop' : ''}`} disabled={busy} onClick={() => answer('even')}>Even</button>
+                <button className={`segbtn cut${picked === 'b' ? ' on pop' : ''}`} disabled={busy} onClick={() => answer('b')}>B ahead</button>
               </div>
-              <button className="btn ghost" disabled={busy} onClick={next}>Skip this one</button>
+              <button className="btn ghost" disabled={busy} onClick={skip}>Skip this one</button>
             </>
           ) : (
             <>
@@ -139,6 +159,6 @@ export default function DeskMode({
 
       {err && <p className="error">{err}</p>}
       {!item && err && <button className="btn ghost" onClick={next}>Try again</button>}
-    </>
+    </div>
   );
 }
