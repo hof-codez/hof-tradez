@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError, friendly } from './api.ts';
 import type { DeskItem, RealSplit, VoteResult } from './types.ts';
 import { AssetRow } from './ui.tsx';
+import { buzz } from './haptic.ts';
 
 const MIN_SPLIT = 3; // show how the league voted once this many owners have
 
@@ -55,6 +56,7 @@ export default function DeskMode({
     if (!item) return;
     setBusy(true);
     setPicked(outcome);
+    buzz('tap');
     setPhase('saving');
     setErr('');
     try {
@@ -64,6 +66,7 @@ export default function DeskMode({
           : { kind: 'real', id: item.id, outcome };
       const r = await api.deskVote(token, payload);
       onResult(r);
+      buzz('done');
       setPhase('loading');
       if (item.kind === 'real' && r.votesLeft > 0) {
         setAfter({ split: r.split && r.split.total >= MIN_SPLIT ? r.split : null });
@@ -73,6 +76,7 @@ export default function DeskMode({
         setItem(null);
       }
     } catch (e) {
+      buzz('error');
       setErr(friendly(e));
       if (e instanceof ApiError && ['own_asset', 'offer_expired', 'already_voted', 'bad_assets'].includes(e.code)) await next();
       if (e instanceof ApiError && e.code === 'daily_limit') { onVotesLeft(0); setItem(null); }

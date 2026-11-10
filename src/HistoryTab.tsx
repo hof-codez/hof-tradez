@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buzz } from './haptic.ts';
 import { api, friendly } from './api.ts';
 import { consensusFor, outcomeWord } from './history.ts';
 import { tradeStory, type SideStory } from './tradeStory.ts';
@@ -48,9 +49,11 @@ export default function HistoryTab({
   async function vote(t: HistoryTrade, outcome: 'a' | 'even' | 'b') {
     setBusy(t.id);
     setErr('');
+    buzz('tap');
     try {
       const r = await api.deskVote(token, { kind: 'real', id: t.id, outcome });
       onVotesLeft(r.votesLeft);
+      buzz('done');
       const mine = outcome === 'a' ? 1 : outcome === 'even' ? 0 : -1;
       setTrades((prev) =>
         prev ? prev.map((x) => (x.id === t.id ? { ...x, mine, canVote: false, split: r.split ?? x.split } : x)) : prev,
