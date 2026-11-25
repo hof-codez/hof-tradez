@@ -129,17 +129,15 @@ export default function DeskMode({
       {item?.kind === 'real' && (
         <>
           <div className="note">
-            <span className="tag good">Real trade</span> Made in our league in {item.year}. Names hidden. Who came out ahead?
+            <span className="tag good">Real trade</span> {item.year} league trade. Who won?
           </div>
           <div className="card">
-            <h2>Team A gives</h2>
-            <div className="meta">Team B receives</div>
-            {item.aGave.map((a) => <AssetRow key={a.id} a={a} />)}
-          </div>
-          <div className="card">
-            <h2>Team B gives</h2>
-            <div className="meta">Team A receives</div>
+            <h2>Team A receives</h2>
             {item.bGave.map((a) => <AssetRow key={a.id} a={a} />)}
+          </div>
+          <div className="card">
+            <h2>Team B receives</h2>
+            {item.aGave.map((a) => <AssetRow key={a.id} a={a} />)}
           </div>
           {!after ? (
             <>
